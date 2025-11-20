@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AiLuna (SaaS版) - AI電話取次サービス
 
-## Getting Started
+AI電話取次サービス「AiLuna」のSaaS版Webアプリケーションです。
+Next.jsとSupabaseを使用して構築されており、セキュアな認証機能とモダンなLPを備えています。
 
-First, run the development server:
+## 技術スタック
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Auth & DB**: Supabase
+- **Icons**: Lucide React
+
+## 機能
+
+- **ランディングページ (LP)**:
+  - 未ログインユーザー向けのサービス紹介ページ
+  - ログイン/新規登録フォームの埋め込み (`src/components/AuthForm.tsx`)
+  - レスポンシブデザイン
+- **認証機能**:
+  - メールアドレス/パスワードによるサインアップ・ログイン
+  - Supabase Auth UI と Server Actions を併用
+  - ログインページを廃止し、トップページ（LP）に統合
+  - 未認証ユーザーは自動的にトップページへリダイレクト
+- **ダッシュボード**:
+  - ログイン済みユーザーのみアクセス可能 (`/dashboard`)
+  - ユーザー情報の表示
+  - ログアウト機能
+- **ミドルウェア**:
+  - セッション管理とルート保護
+  - 未認証ユーザーのダッシュボードアクセス制限
+  - LP (`/`) へのパブリックアクセス許可
+
+## セットアップ
+
+### 1. 環境変数の設定
+
+`.env.local` ファイルを作成し、Supabaseのプロジェクト情報を設定してください。
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. インストールと実行
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# 依存関係のインストール
+npm install
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# 開発サーバーの起動
+npm run dev
+```
 
-## Learn More
+ブラウザで [http://localhost:3000](http://localhost:3000) を開いて確認してください。
 
-To learn more about Next.js, take a look at the following resources:
+## 開発ガイド
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### コード概要の更新
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+大きな変更を行った後は、以下のコマンドを実行してコードの要約ファイルを更新してください。
 
-## Deploy on Vercel
+```bash
+npm run summary
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+これにより、`project_code_summary.txt` が最新化され、AIエージェントとのコンテキスト共有がスムーズになります。
