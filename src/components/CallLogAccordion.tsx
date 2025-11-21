@@ -69,7 +69,7 @@ export function CallLogAccordion({ callLogs }: CallLogAccordionProps) {
                                     </div>
 
                                     {/* 要約 */}
-                                    <p className="text-sm text-zinc-500 line-clamp-1">
+                                    <p className="text-sm text-zinc-500 line-clamp-2">
                                         {log.summary || '要約なし'}
                                     </p>
                                 </div>
