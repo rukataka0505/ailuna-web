@@ -69,7 +69,7 @@ export function CallLogAccordion({ callLogs }: CallLogAccordionProps) {
                                     </div>
 
                                     {/* 要約 */}
-                                    <p className="text-sm text-zinc-500 line-clamp-2">
+                                    <p className="text-sm text-zinc-500 line-clamp-1">
                                         {log.summary || '要約なし'}
                                     </p>
                                 </div>
@@ -85,6 +85,12 @@ export function CallLogAccordion({ callLogs }: CallLogAccordionProps) {
                         {/* 展開時の詳細ビュー */}
                         {isExpanded && (
                             <div className="px-5 pb-5 pt-2 bg-zinc-50/50 border-t border-zinc-100">
+                                {log.summary && (
+                                    <div className="mb-4 p-3 bg-white rounded-lg border border-zinc-200 text-sm text-zinc-600">
+                                        <p className="font-medium text-zinc-900 mb-1">要約</p>
+                                        {log.summary}
+                                    </div>
+                                )}
                                 {log.call_sid && (
                                     <div className="mb-3 text-xs text-zinc-500">
                                         <span className="font-medium">Call ID:</span> {log.call_sid}
