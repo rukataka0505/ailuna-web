@@ -5,7 +5,7 @@ export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
     // パラメータに "next" がある場合、それをリダイレクト先URLとして使用します
-    const next = searchParams.get('next') ?? '/dashboard'
+    const next = searchParams.get('next') ?? '/auth/complete'
 
     if (code) {
         const supabase = await createClient()
