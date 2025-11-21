@@ -9,10 +9,10 @@ import {
     LogOut,
     LayoutDashboard,
     User,
-    BarChart3,
-    History,
 } from 'lucide-react'
 import { CallLogList } from '@/components/CallLogList'
+import { Suspense } from 'react'
+import { DashboardMetrics, DashboardMetricsSkeleton } from '@/components/DashboardMetrics'
 
 
 export default async function DashboardPage() {
@@ -102,34 +102,9 @@ export default async function DashboardPage() {
 
                 <div className="max-w-5xl mx-auto p-6 lg:p-10 space-y-8">
                     {/* ステータスカード */}
-                    <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-medium text-zinc-500">今月の着信対応</h3>
-                                <Phone className="h-5 w-5 text-indigo-600" />
-                            </div>
-                            <div className="text-2xl font-bold text-zinc-900">0件</div>
-                            <p className="text-xs text-zinc-500 mt-1">先月比 +0%</p>
-                        </div>
-                        <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-medium text-zinc-500">利用時間</h3>
-                                <BarChart3 className="h-5 w-5 text-indigo-600" />
-                            </div>
-                            <div className="text-2xl font-bold text-zinc-900">0分</div>
-                            <p className="text-xs text-zinc-500 mt-1">残り無料枠: 60分</p>
-                        </div>
-                        <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-medium text-zinc-500">現在のプラン</h3>
-                                <CreditCard className="h-5 w-5 text-indigo-600" />
-                            </div>
-                            <div className="text-2xl font-bold text-zinc-900">Free</div>
-                            <button className="text-xs text-indigo-600 font-medium mt-1 hover:underline">
-                                プロプランへアップグレード
-                            </button>
-                        </div>
-                    </section>
+                    <Suspense fallback={<DashboardMetricsSkeleton />}>
+                        <DashboardMetrics />
+                    </Suspense>
 
                     {/* AI設定フォーム */}
                     <DashboardForm

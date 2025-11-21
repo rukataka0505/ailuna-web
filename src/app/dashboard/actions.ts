@@ -123,3 +123,46 @@ export async function fetchCallLogsPaginated(
 
     return { logs: data, count }
 }
+
+export type CallMetrics = {
+    totalCalls: number
+    totalDurationMinutes: number
+}
+
+export async function fetchCallMetrics(): Promise<CallMetrics> {
+    const supabase = await createClient()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { totalCalls: 0, totalDurationMinutes: 0 }
+    }
+
+    // 着信対応回数を取得
+    const { count, error: countError } = await supabase
+        .from('call_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+
+    if (countError) {
+        console.error('Error fetching call metrics (count):', countError)
+        return { totalCalls: 0, totalDurationMinutes: 0 }
+    }
+
+    // 合計利用時間を取得
+    // TODO: call_logsテーブルに duration_seconds カラムが追加されたら、以下の集計ロジックを実装する
+    // 現在はカラムが存在しないため、0を返す
+    // 将来の実装イメージ:
+    // const { data, error: sumError } = await supabase.rpc('sum_duration_seconds', { user_id_param: user.id })
+    // または
+    // const { data } = await supabase.from('call_logs').select('duration_seconds').eq('user_id', user.id)
+    // const totalSeconds = data.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0)
+    
+    const totalDurationMinutes = 0
+
+    return {
+        totalCalls: count || 0,
+        totalDurationMinutes
+    }
+}
