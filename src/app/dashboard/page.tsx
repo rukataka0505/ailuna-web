@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { signOut } from './actions'
+import { DashboardForm } from './DashboardForm'
 import {
     Phone,
     Settings,
@@ -9,7 +10,6 @@ import {
     LayoutDashboard,
     User,
     BarChart3,
-    Save
 } from 'lucide-react'
 
 export default async function DashboardPage() {
@@ -22,6 +22,12 @@ export default async function DashboardPage() {
     if (!user) {
         redirect('/login')
     }
+
+    const { data: prompts } = await supabase
+        .from('user_prompts')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
 
     return (
         <div className="min-h-screen bg-zinc-50 flex">
@@ -118,50 +124,11 @@ export default async function DashboardPage() {
                         </div>
                     </section>
 
-                    {/* AI設定フォーム（ダミー） */}
-                    <section>
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-lg font-bold text-zinc-900">AIエージェント設定</h2>
-                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-medium">未保存の変更があります</span>
-                        </div>
-
-                        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-                            <div className="p-6 space-y-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-zinc-900 mb-2">
-                                        電話に出た時の挨拶
-                                    </label>
-                                    <p className="text-xs text-zinc-500 mb-2">
-                                        AIが電話に出た際、最初に発話するメッセージです。会社名を含めることを推奨します。
-                                    </p>
-                                    <textarea
-
-                                        className="w-full min-h-[80px] p-3 text-sm text-zinc-900 bg-white border border-zinc-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-y"
-                                        placeholder="お電話ありがとうございます。株式会社AiLunaでございます。担当にお繋ぎいたしますので、ご用件をお話しください。"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-zinc-900 mb-2">
-                                        事業内容の説明 (AIへの指示)
-                                    </label>
-                                    <p className="text-xs text-zinc-500 mb-2">
-                                        あなたの会社のサービス内容や、よくある質問への回答方針を入力してください。
-                                    </p>
-                                    <textarea
-                                        className="w-full min-h-[80px] p-3 text-sm text-zinc-900 bg-white border border-zinc-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-y"
-                                        placeholder="当社はAI電話代行サービスを提供しています。料金は月額980円からです。営業時間は平日9:00〜18:00です..."
-                                    />
-                                </div>
-                            </div>
-                            <div className="bg-zinc-50 px-6 py-4 border-t border-zinc-200 flex justify-end">
-                                <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
-                                    <Save className="h-4 w-4" />
-                                    設定を保存する
-                                </button>
-                            </div>
-                        </div>
-                    </section>
+                    {/* AI設定フォーム */}
+                    <DashboardForm
+                        initialGreeting={prompts?.greeting_message || ''}
+                        initialDescription={prompts?.business_description || ''}
+                    />
                 </div>
             </main>
         </div>
