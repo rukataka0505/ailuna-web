@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { signOut } from './actions'
+import { signOut, fetchCallLogsPaginated } from './actions'
 import { DashboardForm } from './DashboardForm'
 import {
     Phone,
@@ -12,7 +12,7 @@ import {
     BarChart3,
     History,
 } from 'lucide-react'
-import { CallLogAccordion } from '@/components/CallLogAccordion'
+import { CallLogList } from '@/components/CallLogList'
 
 
 export default async function DashboardPage() {
@@ -32,11 +32,7 @@ export default async function DashboardPage() {
         .eq('user_id', user.id)
         .single()
 
-    const { data: callLogs } = await supabase
-        .from('call_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10)
+    const { logs: initialLogs, count: initialCount } = await fetchCallLogsPaginated(0, 10, 'desc')
 
 
     return (
@@ -142,11 +138,8 @@ export default async function DashboardPage() {
 
                     {/* 通話履歴 */}
                     <section className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-zinc-200 flex items-center gap-2">
-                            <History className="h-5 w-5 text-indigo-600" />
-                            <h2 className="text-lg font-bold text-zinc-900">通話履歴</h2>
-                        </div>
-                        <CallLogAccordion callLogs={callLogs || []} />
+                        {/* ヘッダーは CallLogList 内に移動したため削除 */}
+                        <CallLogList initialLogs={initialLogs || []} initialCount={initialCount} />
                     </section>
 
                 </div>

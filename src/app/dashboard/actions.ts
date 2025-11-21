@@ -44,3 +44,28 @@ export async function updateUserPrompts(prevState: any, formData: FormData) {
     revalidatePath('/dashboard')
     return { success: '設定を保存しました。' }
 }
+
+export async function fetchCallLogsPaginated(offset: number, limit: number, sortOrder: 'desc' | 'asc') {
+    const supabase = await createClient()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+        throw new Error('Unauthorized')
+    }
+
+    const { data, count, error } = await supabase
+        .from('call_logs')
+        .select('*', { count: 'exact' })
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: sortOrder === 'asc' })
+        .range(offset, offset + limit - 1)
+
+    if (error) {
+        console.error('Error fetching call logs:', error)
+        throw new Error('Failed to fetch call logs')
+    }
+
+    return { logs: data, count }
+}
