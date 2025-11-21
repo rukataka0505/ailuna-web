@@ -13,8 +13,7 @@ import {
 import { CallLogList } from '@/components/CallLogList'
 import { Suspense } from 'react'
 import { DashboardMetrics, DashboardMetricsSkeleton } from '@/components/DashboardMetrics'
-import { UserPhoneDisplay } from '@/components/UserPhoneDisplay'
-import { AccountNameDisplay } from '@/components/AccountNameDisplay'
+import { AccountInfoCard } from '@/components/AccountInfoCard'
 import { PlanInfoDisplay } from '@/components/PlanInfoDisplay'
 
 
@@ -48,10 +47,11 @@ export default async function DashboardPage() {
                     <div className="flex items-center gap-2 text-indigo-600">
                         <Phone className="h-6 w-6" />
                         <span className="text-xl font-bold text-zinc-900">AiLuna</span>
-                        <div className="ml-auto">
-                            <AccountNameDisplay accountName={userProfile?.account_name} />
-                        </div>
                     </div>
+                    <AccountInfoCard
+                        accountName={userProfile?.account_name}
+                        phoneNumber={userProfile?.phone_number}
+                    />
                     <PlanInfoDisplay />
                 </div>
 
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
                 </nav>
 
                 <div className="p-4 border-t border-zinc-200">
-                    <div className="flex items-center gap-3 px-4 py-3 mb-2">
+                    <div className="flex items-center gap-3 px-4 py-3">
                         <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
                             <User className="h-4 w-4" />
                         </div>
@@ -81,7 +81,6 @@ export default async function DashboardPage() {
                             </p>
                         </div>
                     </div>
-                    <UserPhoneDisplay phoneNumber={userProfile?.phone_number} />
                     <form action={signOut}>
                         <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-zinc-500 hover:text-red-600 transition-all active:scale-95">
                             <LogOut className="h-4 w-4" />
@@ -107,8 +106,10 @@ export default async function DashboardPage() {
                         </form>
                     </div>
                     <div className="px-4 pb-3 space-y-2">
-                        <AccountNameDisplay accountName={userProfile?.account_name} />
-                        <UserPhoneDisplay phoneNumber={userProfile?.phone_number} />
+                        <AccountInfoCard
+                            accountName={userProfile?.account_name}
+                            phoneNumber={userProfile?.phone_number}
+                        />
                         <PlanInfoDisplay />
                     </div>
                 </div>

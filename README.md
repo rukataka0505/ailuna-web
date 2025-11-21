@@ -72,20 +72,18 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
   - サーバーアクション: `src/app/dashboard/actions.ts` の `fetchUserProfile()`
 - **ダッシュボードヘッダー構成**:
   - ダッシュボードのヘッダー（サイドバーおよびモバイルヘッダー）は以下の構成になっています：
-  - **ロゴとアカウント名**:
-    - ロゴ「AiLuna」の横にログインユーザーの `account_name` を表示
-    - データソース: `profiles.account_name` カラム
-    - アカウント名が設定されている場合: 「アカウント：{name}」のように表示
-    - アカウント名が未設定の場合: 「アカウント：未設定」と表示
-    - コンポーネント: `src/components/AccountNameDisplay.tsx`
-  - **プラン情報**:
-    - ロゴ／アカウント名の直下に「現在のプラン」と「プロプランへアップグレード」ボタンを配置
-    - デスクトップでは左右に配置、モバイルでは縦並び
-    - コンポーネント: `src/components/PlanInfoDisplay.tsx`
-  - **関連ファイル**:
-    - サーバーアクション: `src/app/dashboard/actions.ts` の `fetchUserProfile()`
-    - ダッシュボードページ: `src/app/dashboard/page.tsx`
-    - マイグレーションSQL: `supabase/add_account_name_column.sql`
+  - **アカウント情報カード**:
+    - ロゴ「AiLuna」の下に、アカウント名と電話番号を1つのカードで表示
+    - データソース: `profiles.account_name` および `profiles.phone_number` カラム
+    - **デザイン**: アイコンベースのモダンなレイアウト
+      - アカウント名: User アイコン + 名前（太字）
+      - 電話番号: Phone アイコン + 番号（サブ情報）
+      - デスクトップでは1行表示（例：👤 rukataka0505 ・ 📞 +1573...）
+      - モバイルでは折り返し対応
+    - **未登録時の表示**:
+      - アカウント名が未設定の場合: 「未設定」と表示
+      - 電話番号が未登録の場合: 「未登録」とグレーアウト表示
+    - コンポーネント: `src/components/AccountInfoCard.tsx`
 
 ## UI/UX改善
 
