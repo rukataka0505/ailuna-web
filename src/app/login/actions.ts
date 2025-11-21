@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation'
 
 import { createClient } from '@/utils/supabase/server'
 
-export async function login(formData: FormData) {
+export async function login(formData: FormData): Promise<{ error: string } | undefined> {
     console.log('Login action started')
     const supabase = await createClient()
 
@@ -29,7 +29,7 @@ export async function login(formData: FormData) {
     redirect('/dashboard')
 }
 
-export async function signup(formData: FormData) {
+export async function signup(formData: FormData): Promise<{ error: string } | { success: true }> {
     const supabase = await createClient()
     const origin = (await headers()).get('origin')
 
@@ -50,5 +50,5 @@ export async function signup(formData: FormData) {
     }
 
     revalidatePath('/', 'layout')
-    redirect('/dashboard')
+    return { success: true }
 }
