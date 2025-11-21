@@ -69,7 +69,7 @@ export function DashboardForm({ initialGreeting, initialDescription }: Dashboard
                     <button
                         type="submit"
                         disabled={isPending}
-                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 disabled:active:scale-100"
                     >
                         <Save className="h-4 w-4" />
                         {isPending ? '保存中...' : '設定を保存する'}
