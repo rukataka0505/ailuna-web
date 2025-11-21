@@ -151,15 +151,23 @@ export async function fetchCallMetrics(): Promise<CallMetrics> {
     }
 
     // 合計利用時間を取得
-    // TODO: call_logsテーブルに duration_seconds カラムが追加されたら、以下の集計ロジックを実装する
-    // 現在はカラムが存在しないため、0を返す
-    // 将来の実装イメージ:
-    // const { data, error: sumError } = await supabase.rpc('sum_duration_seconds', { user_id_param: user.id })
-    // または
-    // const { data } = await supabase.from('call_logs').select('duration_seconds').eq('user_id', user.id)
-    // const totalSeconds = data.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0)
-    
-    const totalDurationMinutes = 0
+    // call_logsテーブルの duration_seconds カラム（秒）を合計し、分単位に変換する
+    // duration_seconds が NULL の場合は 0 として扱う
+    const { data: durationData, error: durationError } = await supabase
+        .from('call_logs')
+        .select('duration_seconds')
+        .eq('user_id', user.id)
+
+    let totalSeconds = 0
+    if (durationError) {
+        console.error('Error fetching call metrics (duration):', durationError)
+        // エラー時は 0 秒として続行
+    } else if (durationData) {
+        totalSeconds = durationData.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0)
+    }
+
+    // 秒 -> 分（小数点第1位まで）
+    const totalDurationMinutes = Number((totalSeconds / 60).toFixed(1))
 
     return {
         totalCalls: count || 0,

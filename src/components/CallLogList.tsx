@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, Phone, Loader2, Search, X, Calendar, User } from 'lucide-react'
+import { ChevronDown, Phone, Loader2, Search, X, Calendar, User, Filter } from 'lucide-react'
 import { ConversationViewer, TranscriptItem } from './ConversationViewer'
 import { fetchCallLogsPaginated } from '@/app/dashboard/actions'
 
@@ -36,6 +36,7 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
     })
     const [loading, setLoading] = useState(false)
     const [expandedId, setExpandedId] = useState<string | null>(null)
+    const [isFilterOpen, setIsFilterOpen] = useState(false)
 
     const toggleExpand = (id: string) => {
         setExpandedId(expandedId === id ? null : id)
@@ -67,6 +68,7 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
             setCount(newCount || 0)
             setOffset(10)
             setExpandedId(null)
+            setIsFilterOpen(false)
         } catch (error) {
             console.error('Failed to apply filters:', error)
             alert('検索に失敗しました。')
@@ -114,7 +116,7 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
     return (
         <div>
             {/* ヘッダー部分：件数表示とフィルター */}
-            <div className="p-6 border-b border-zinc-200 bg-white space-y-6">
+            <div className="relative p-6 border-b border-zinc-200 bg-white">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <h2 className="text-lg font-bold text-zinc-900">通話履歴</h2>
@@ -122,85 +124,110 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
                             全{count}件
                         </span>
                     </div>
+
+                    <button
+                        onClick={() => setIsFilterOpen(!isFilterOpen)}
+                        className={`p-2 rounded-lg transition-colors border border-transparent ${isFilterOpen
+                                ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                                : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 hover:border-zinc-200'
+                            }`}
+                        title="フィルター"
+                    >
+                        <Filter className="h-5 w-5" />
+                    </button>
                 </div>
 
-                {/* フィルターエリア */}
-                <div className="bg-zinc-50 p-4 rounded-lg border border-zinc-100">
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                        {/* 期間フィルター */}
-                        <div className="md:col-span-5 grid grid-cols-2 gap-2">
-                            <div className="space-y-1.5">
-                                <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    開始日
-                                </label>
-                                <input
-                                    type="date"
-                                    name="startDate"
-                                    value={filters.startDate}
-                                    onChange={handleFilterChange}
-                                    className="block w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    終了日
-                                </label>
-                                <input
-                                    type="date"
-                                    name="endDate"
-                                    value={filters.endDate}
-                                    onChange={handleFilterChange}
-                                    className="block w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
-                                />
-                            </div>
-                        </div>
+                {/* フィルターポップアップ */}
+                {isFilterOpen && (
+                    <>
+                        {/* 背景クリックで閉じるためのオーバーレイ */}
+                        <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
 
-                        {/* 発信者フィルター */}
-                        <div className="md:col-span-4 space-y-1.5">
-                            <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
-                                <User className="h-3.5 w-3.5" />
-                                発信者
-                            </label>
-                            <select
-                                name="callerNumber"
-                                value={filters.callerNumber}
-                                onChange={handleFilterChange}
-                                className="block w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
-                            >
-                                <option value="">全ての発信者</option>
-                                {uniqueCallers.map((number) => (
-                                    <option key={number} value={number}>
-                                        {number}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* アクションボタン */}
-                        <div className="md:col-span-3 flex gap-2">
-                            {(filters.startDate || filters.endDate || filters.callerNumber) && (
+                        <div className="absolute right-6 top-full mt-2 w-full md:w-[320px] bg-white p-5 rounded-xl shadow-xl border border-zinc-200 z-50 animate-in fade-in zoom-in-95 duration-200">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-semibold text-zinc-900">絞り込み検索</h3>
                                 <button
-                                    onClick={clearFilters}
-                                    disabled={loading}
-                                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-lg transition-all active:scale-[0.96]"
+                                    onClick={() => setIsFilterOpen(false)}
+                                    className="text-zinc-400 hover:text-zinc-600 p-1 rounded-md hover:bg-zinc-100"
                                 >
                                     <X className="h-4 w-4" />
-                                    クリア
                                 </button>
-                            )}
-                            <button
-                                onClick={applyFilters}
-                                disabled={loading}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all active:scale-[0.96] disabled:opacity-50"
-                            >
-                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                                検索
-                            </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* 期間フィルター */}
+                                <div className="space-y-3">
+                                    <div className="space-y-1.5">
+                                        <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-700">
+                                            <Calendar className="h-3.5 w-3.5" />
+                                            開始日
+                                        </label>
+                                        <input
+                                            type="date"
+                                            name="startDate"
+                                            value={filters.startDate}
+                                            onChange={handleFilterChange}
+                                            className="block w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm text-zinc-900"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-700">
+                                            <Calendar className="h-3.5 w-3.5" />
+                                            終了日
+                                        </label>
+                                        <input
+                                            type="date"
+                                            name="endDate"
+                                            value={filters.endDate}
+                                            onChange={handleFilterChange}
+                                            className="block w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm text-zinc-900"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* 発信者フィルター */}
+                                <div className="space-y-1.5">
+                                    <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-700">
+                                        <User className="h-3.5 w-3.5" />
+                                        発信者
+                                    </label>
+                                    <select
+                                        name="callerNumber"
+                                        value={filters.callerNumber}
+                                        onChange={handleFilterChange}
+                                        className="block w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm text-zinc-900"
+                                    >
+                                        <option value="">全ての発信者</option>
+                                        {uniqueCallers.map((number) => (
+                                            <option key={number} value={number}>
+                                                {number}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* アクションボタン */}
+                                <div className="pt-2 flex gap-2">
+                                    <button
+                                        onClick={clearFilters}
+                                        disabled={loading}
+                                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-lg transition-all active:scale-[0.96]"
+                                    >
+                                        クリア
+                                    </button>
+                                    <button
+                                        onClick={applyFilters}
+                                        disabled={loading}
+                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all active:scale-[0.96] disabled:opacity-50"
+                                    >
+                                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                        検索
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    </>
+                )}
             </div>
 
             {/* リスト表示 */}
