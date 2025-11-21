@@ -24,6 +24,7 @@ export function CallLogList({ initialLogs, initialCount }: CallLogListProps) {
     const [count, setCount] = useState<number>(initialCount || 0)
     const [offset, setOffset] = useState(10)
     const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
+    const [sortBy, setSortBy] = useState<'created_at' | 'caller_number'>('created_at')
     const [loading, setLoading] = useState(false)
     const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -48,7 +49,7 @@ export function CallLogList({ initialLogs, initialCount }: CallLogListProps) {
         setLoading(true)
         try {
             // Reset to first page
-            const { logs: newLogs, count: newCount } = await fetchCallLogsPaginated(0, 10, newSortOrder)
+            const { logs: newLogs, count: newCount } = await fetchCallLogsPaginated(0, 10, newSortOrder, sortBy)
             setLogs(newLogs as CallLog[])
             setCount(newCount || 0)
             setOffset(10)
@@ -61,10 +62,29 @@ export function CallLogList({ initialLogs, initialCount }: CallLogListProps) {
         }
     }
 
+    const handleSortKeyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newSortBy = e.target.value as 'created_at' | 'caller_number'
+        setSortBy(newSortBy)
+        setLoading(true)
+        try {
+            // Reset to first page
+            const { logs: newLogs, count: newCount } = await fetchCallLogsPaginated(0, 10, sortOrder, newSortBy)
+            setLogs(newLogs as CallLog[])
+            setCount(newCount || 0)
+            setOffset(10)
+            setExpandedId(null)
+        } catch (error) {
+            console.error('Failed to change sort key:', error)
+            alert('並び替えに失敗しました。')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const handleLoadMore = async () => {
         setLoading(true)
         try {
-            const { logs: newLogs } = await fetchCallLogsPaginated(offset, 10, sortOrder)
+            const { logs: newLogs } = await fetchCallLogsPaginated(offset, 10, sortOrder, sortBy)
             if (newLogs && newLogs.length > 0) {
                 setLogs([...logs, ...newLogs as CallLog[]])
                 setOffset(offset + 10)
@@ -87,14 +107,25 @@ export function CallLogList({ initialLogs, initialCount }: CallLogListProps) {
                         全{count}件
                     </span>
                 </div>
-                <button
-                    onClick={handleSortChange}
-                    disabled={loading}
-                    className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 px-3 py-2 rounded-lg transition-all active:scale-[0.96]"
-                >
-                    <ArrowUpDown className="h-4 w-4" />
-                    {sortOrder === 'desc' ? '新しい順' : '古い順'}
-                </button>
+                <div className="flex items-center gap-2">
+                    <select
+                        value={sortBy}
+                        onChange={handleSortKeyChange}
+                        disabled={loading}
+                        className="text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-2 pl-3 pr-8"
+                    >
+                        <option value="created_at">日時</option>
+                        <option value="caller_number">電話番号</option>
+                    </select>
+                    <button
+                        onClick={handleSortChange}
+                        disabled={loading}
+                        className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 px-3 py-2 rounded-lg transition-all active:scale-[0.96]"
+                    >
+                        <ArrowUpDown className="h-4 w-4" />
+                        {sortOrder === 'desc' ? (sortBy === 'created_at' ? '新しい順' : '降順') : (sortBy === 'created_at' ? '古い順' : '昇順')}
+                    </button>
+                </div>
             </div>
 
             {/* リスト表示 */}

@@ -45,7 +45,12 @@ export async function updateUserPrompts(prevState: any, formData: FormData) {
     return { success: '設定を保存しました。' }
 }
 
-export async function fetchCallLogsPaginated(offset: number, limit: number, sortOrder: 'desc' | 'asc') {
+export async function fetchCallLogsPaginated(
+    offset: number,
+    limit: number,
+    sortOrder: 'desc' | 'asc',
+    sortBy: 'created_at' | 'caller_number' = 'created_at'
+) {
     const supabase = await createClient()
     const {
         data: { user },
@@ -59,7 +64,7 @@ export async function fetchCallLogsPaginated(offset: number, limit: number, sort
         .from('call_logs')
         .select('*', { count: 'exact' })
         .eq('user_id', user.id)
-        .order('created_at', { ascending: sortOrder === 'asc' })
+        .order(sortBy, { ascending: sortOrder === 'asc' })
         .range(offset, offset + limit - 1)
 
     if (error) {
