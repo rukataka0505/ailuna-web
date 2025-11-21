@@ -12,7 +12,7 @@ import {
     BarChart3,
     History,
 } from 'lucide-react'
-import { ConversationViewer, TranscriptItem } from '@/components/ConversationViewer'
+import { CallLogAccordion } from '@/components/CallLogAccordion'
 
 
 export default async function DashboardPage() {
@@ -146,28 +146,7 @@ export default async function DashboardPage() {
                             <History className="h-5 w-5 text-indigo-600" />
                             <h2 className="text-lg font-bold text-zinc-900">通話履歴</h2>
                         </div>
-                        <div className="divide-y divide-zinc-100">
-                            {callLogs?.map((log: any) => (
-                                <div key={log.id} className="p-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="text-sm font-medium text-zinc-900">
-                                                {new Date(log.created_at).toLocaleString('ja-JP')}
-                                            </div>
-                                            <span className="px-2 py-1 text-xs font-medium bg-zinc-100 text-zinc-600 rounded-full">
-                                                {log.call_sid || 'Unknown ID'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <ConversationViewer transcript={log.transcript as TranscriptItem[]} />
-                                </div>
-                            ))}
-                            {(!callLogs || callLogs.length === 0) && (
-                                <div className="p-10 text-center text-zinc-500">
-                                    通話履歴はまだありません
-                                </div>
-                            )}
-                        </div>
+                        <CallLogAccordion callLogs={callLogs || []} />
                     </section>
 
                 </div>

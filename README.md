@@ -36,6 +36,11 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
   - **AI設定**:
     - 電話応答時の挨拶と事業内容を設定可能
     - 設定は `user_prompts` テーブルに保存され、ログインユーザーごとに管理されます
+  - **通話履歴**:
+    - アコーディオン形式で過去の通話ログを表示
+    - クリックで詳細な会話内容を展開/折りたたみ可能
+    - AI生成の要約タイトルで内容を一目で把握
+    - 日時、電話番号、要約を一覧表示
   - ログアウト機能
 - **ミドルウェア**:
   - セッション管理とルート保護
@@ -114,11 +119,20 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
  4. **Run** ボタンをクリックして実行します。
  5. 画面右下のログに "Success" と表示されれば完了です。
  
- ### 3. テーブル作成の確認
- 左サイドバーの **Table Editor** を開き、以下のテーブルが作成されていることを確認してください：
- 
- - `profiles`: ユーザー情報（Stripe IDなど）
- - `user_prompts`: AI設定（挨拶文、事業説明）
+ ### 3. 通話履歴機能のテーブル追加（追加セットアップ）
+  通話履歴機能を使用する場合は、以下のSQLファイルも実行してください：
+  
+  1. Supabase ダッシュボードの **SQL Editor** を開きます。
+  2. `../supabase/add_summary_column.sql` の内容をコピーし、エディタに貼り付けます。
+  3. **Run** ボタンをクリックして実行します。
+  4. これにより `call_logs` テーブルと `summary` カラムが追加されます。
+  
+  ### 4. テーブル作成の確認
+  左サイドバーの **Table Editor** を開き、以下のテーブルが作成されていることを確認してください：
+  
+  - `profiles`: ユーザー情報（Stripe IDなど）
+  - `user_prompts`: AI設定（挨拶文、事業説明）
+  - `call_logs`: 通話履歴（Call Engine からの保存用）
  
  > [!IMPORTANT]
  > `user_prompts` テーブルの `user_id` カラムには **Unique** 制約が必要です。`schema.sql` にはこれが含まれていますが、もし手動で作成した場合は必ず追加してください。これがないと設定の保存（Upsert）が正しく動作しません。
@@ -138,6 +152,16 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
    - `user_id`: UUID (`profiles.id` 参照)
    - `greeting_message`: 挨拶メッセージ
    - `business_description`: 事業内容・指示
+
+3. **`public.call_logs`** (通話履歴)
+   - `id`: UUID (Primary Key)
+   - `user_id`: UUID (`profiles.id` 参照)
+   - `call_sid`: Twilio Call SID
+   - `caller_number`: 発信者電話番号
+   - `transcript`: JSONB 形式の会話ログ
+   - `summary`: AI生成の要約タイトル（20文字程度）
+   - `created_at`: 通話日時
+   - `updated_at`: 更新日時
 
 ### セキュリティ (RLS)
 - ユーザーは自身のデータのみ読み書き可能 (`auth.uid() = user_id`)
