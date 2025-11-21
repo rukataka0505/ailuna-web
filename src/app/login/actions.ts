@@ -29,6 +29,7 @@ export async function login(formData: FormData): Promise<{ error: string } | und
     redirect('/dashboard')
 }
 
+
 export async function signup(formData: FormData): Promise<{ error: string } | { success: true }> {
     const supabase = await createClient()
     const origin = (await headers()).get('origin')
@@ -50,5 +51,23 @@ export async function signup(formData: FormData): Promise<{ error: string } | { 
     }
 
     revalidatePath('/', 'layout')
+    return { success: true }
+}
+
+export async function resetPassword(formData: FormData): Promise<{ error: string } | { success: true }> {
+    const supabase = await createClient()
+    const origin = (await headers()).get('origin')
+
+    const email = formData.get('email') as string
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${origin}/auth/callback?next=/auth/update-password`,
+    })
+
+    if (error) {
+        console.error('Reset password error:', error)
+        return { error: 'パスワードリセットに失敗しました。' }
+    }
+
     return { success: true }
 }
