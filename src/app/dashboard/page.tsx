@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { signOut, fetchCallLogsPaginated } from './actions'
+import { signOut, fetchCallLogsPaginated, fetchUniqueCallerNumbers } from './actions'
 import { DashboardForm } from './DashboardForm'
 import {
     Phone,
@@ -32,7 +32,8 @@ export default async function DashboardPage() {
         .eq('user_id', user.id)
         .single()
 
-    const { logs: initialLogs, count: initialCount } = await fetchCallLogsPaginated(0, 10, 'desc')
+    const { logs: initialLogs, count: initialCount } = await fetchCallLogsPaginated(0, 10)
+    const uniqueCallers = await fetchUniqueCallerNumbers()
 
 
     return (
@@ -139,7 +140,11 @@ export default async function DashboardPage() {
                     {/* 通話履歴 */}
                     <section className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
                         {/* ヘッダーは CallLogList 内に移動したため削除 */}
-                        <CallLogList initialLogs={initialLogs || []} initialCount={initialCount} />
+                        <CallLogList 
+                            initialLogs={initialLogs || []} 
+                            initialCount={initialCount} 
+                            uniqueCallers={uniqueCallers}
+                        />
                     </section>
 
                 </div>

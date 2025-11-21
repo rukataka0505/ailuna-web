@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, Phone, Loader2, ArrowUpDown } from 'lucide-react'
+import { ChevronDown, Phone, Loader2, Search, X, Calendar, User } from 'lucide-react'
 import { ConversationViewer, TranscriptItem } from './ConversationViewer'
 import { fetchCallLogsPaginated } from '@/app/dashboard/actions'
 
@@ -17,14 +17,23 @@ type CallLog = {
 interface CallLogListProps {
     initialLogs: CallLog[]
     initialCount: number | null
+    uniqueCallers: string[]
 }
 
-export function CallLogList({ initialLogs, initialCount }: CallLogListProps) {
+export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLogListProps) {
     const [logs, setLogs] = useState<CallLog[]>(initialLogs)
     const [count, setCount] = useState<number>(initialCount || 0)
     const [offset, setOffset] = useState(10)
-    const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc')
-    const [sortBy, setSortBy] = useState<'created_at' | 'caller_number'>('created_at')
+    const [filters, setFilters] = useState({
+        startDate: '',
+        endDate: '',
+        callerNumber: ''
+    })
+    const [activeFilters, setActiveFilters] = useState({
+        startDate: '',
+        endDate: '',
+        callerNumber: ''
+    })
     const [loading, setLoading] = useState(false)
     const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -43,39 +52,44 @@ export function CallLogList({ initialLogs, initialCount }: CallLogListProps) {
         }).replace(/\//g, '/')
     }
 
-    const handleSortChange = async () => {
-        const newSortOrder = sortOrder === 'desc' ? 'asc' : 'desc'
-        setSortOrder(newSortOrder)
+    const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target
+        setFilters(prev => ({ ...prev, [name]: value }))
+    }
+
+    const applyFilters = async () => {
         setLoading(true)
+        setActiveFilters(filters)
         try {
             // Reset to first page
-            const { logs: newLogs, count: newCount } = await fetchCallLogsPaginated(0, 10, newSortOrder, sortBy)
+            const { logs: newLogs, count: newCount } = await fetchCallLogsPaginated(0, 10, filters)
             setLogs(newLogs as CallLog[])
             setCount(newCount || 0)
             setOffset(10)
             setExpandedId(null)
         } catch (error) {
-            console.error('Failed to sort logs:', error)
-            alert('並び替えに失敗しました。')
+            console.error('Failed to apply filters:', error)
+            alert('検索に失敗しました。')
         } finally {
             setLoading(false)
         }
     }
 
-    const handleSortKeyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newSortBy = e.target.value as 'created_at' | 'caller_number'
-        setSortBy(newSortBy)
+    const clearFilters = async () => {
+        const emptyFilters = { startDate: '', endDate: '', callerNumber: '' }
+        setFilters(emptyFilters)
+        setActiveFilters(emptyFilters)
         setLoading(true)
         try {
             // Reset to first page
-            const { logs: newLogs, count: newCount } = await fetchCallLogsPaginated(0, 10, sortOrder, newSortBy)
+            const { logs: newLogs, count: newCount } = await fetchCallLogsPaginated(0, 10, emptyFilters)
             setLogs(newLogs as CallLog[])
             setCount(newCount || 0)
             setOffset(10)
             setExpandedId(null)
         } catch (error) {
-            console.error('Failed to change sort key:', error)
-            alert('並び替えに失敗しました。')
+            console.error('Failed to clear filters:', error)
+            alert('リセットに失敗しました。')
         } finally {
             setLoading(false)
         }
@@ -84,7 +98,7 @@ export function CallLogList({ initialLogs, initialCount }: CallLogListProps) {
     const handleLoadMore = async () => {
         setLoading(true)
         try {
-            const { logs: newLogs } = await fetchCallLogsPaginated(offset, 10, sortOrder, sortBy)
+            const { logs: newLogs } = await fetchCallLogsPaginated(offset, 10, activeFilters)
             if (newLogs && newLogs.length > 0) {
                 setLogs([...logs, ...newLogs as CallLog[]])
                 setOffset(offset + 10)
@@ -99,32 +113,93 @@ export function CallLogList({ initialLogs, initialCount }: CallLogListProps) {
 
     return (
         <div>
-            {/* ヘッダー部分：件数表示とソートボタン */}
-            <div className="p-6 border-b border-zinc-200 flex items-center justify-between bg-white">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-lg font-bold text-zinc-900">通話履歴</h2>
-                    <span className="text-sm text-zinc-500 bg-zinc-100 px-2 py-1 rounded-full">
-                        全{count}件
-                    </span>
+            {/* ヘッダー部分：件数表示とフィルター */}
+            <div className="p-6 border-b border-zinc-200 bg-white space-y-6">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <h2 className="text-lg font-bold text-zinc-900">通話履歴</h2>
+                        <span className="text-sm text-zinc-500 bg-zinc-100 px-2 py-1 rounded-full">
+                            全{count}件
+                        </span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <select
-                        value={sortBy}
-                        onChange={handleSortKeyChange}
-                        disabled={loading}
-                        className="text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-2 pl-3 pr-8"
-                    >
-                        <option value="created_at">日時</option>
-                        <option value="caller_number">電話番号</option>
-                    </select>
-                    <button
-                        onClick={handleSortChange}
-                        disabled={loading}
-                        className="flex items-center gap-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 px-3 py-2 rounded-lg transition-all active:scale-[0.96]"
-                    >
-                        <ArrowUpDown className="h-4 w-4" />
-                        {sortOrder === 'desc' ? (sortBy === 'created_at' ? '新しい順' : '降順') : (sortBy === 'created_at' ? '古い順' : '昇順')}
-                    </button>
+
+                {/* フィルターエリア */}
+                <div className="bg-zinc-50 p-4 rounded-lg border border-zinc-100">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                        {/* 期間フィルター */}
+                        <div className="md:col-span-5 grid grid-cols-2 gap-2">
+                            <div className="space-y-1.5">
+                                <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    開始日
+                                </label>
+                                <input
+                                    type="date"
+                                    name="startDate"
+                                    value={filters.startDate}
+                                    onChange={handleFilterChange}
+                                    className="block w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    終了日
+                                </label>
+                                <input
+                                    type="date"
+                                    name="endDate"
+                                    value={filters.endDate}
+                                    onChange={handleFilterChange}
+                                    className="block w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                                />
+                            </div>
+                        </div>
+
+                        {/* 発信者フィルター */}
+                        <div className="md:col-span-4 space-y-1.5">
+                            <label className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                                <User className="h-3.5 w-3.5" />
+                                発信者
+                            </label>
+                            <select
+                                name="callerNumber"
+                                value={filters.callerNumber}
+                                onChange={handleFilterChange}
+                                className="block w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                            >
+                                <option value="">全ての発信者</option>
+                                {uniqueCallers.map((number) => (
+                                    <option key={number} value={number}>
+                                        {number}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* アクションボタン */}
+                        <div className="md:col-span-3 flex gap-2">
+                            {(filters.startDate || filters.endDate || filters.callerNumber) && (
+                                <button
+                                    onClick={clearFilters}
+                                    disabled={loading}
+                                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-lg transition-all active:scale-[0.96]"
+                                >
+                                    <X className="h-4 w-4" />
+                                    クリア
+                                </button>
+                            )}
+                            <button
+                                onClick={applyFilters}
+                                disabled={loading}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-all active:scale-[0.96] disabled:opacity-50"
+                            >
+                                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                検索
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -132,7 +207,7 @@ export function CallLogList({ initialLogs, initialCount }: CallLogListProps) {
             <div className="divide-y divide-zinc-100 bg-white">
                 {logs.length === 0 ? (
                     <div className="p-10 text-center text-zinc-500">
-                        通話履歴はまだありません
+                        条件に一致する通話履歴はありません
                     </div>
                 ) : (
                     logs.map((log) => {
