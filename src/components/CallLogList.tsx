@@ -143,7 +143,7 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
                         {/* 背景クリックで閉じるためのオーバーレイ */}
                         <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
 
-                        <div className="absolute right-6 top-full mt-2 w-full md:w-[320px] bg-white p-5 rounded-xl shadow-xl border border-zinc-200 z-50 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="absolute left-6 right-6 md:left-auto md:right-6 top-full mt-2 md:w-[320px] bg-white p-5 rounded-xl shadow-xl border border-zinc-200 z-50 animate-in fade-in zoom-in-95 duration-200">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-semibold text-zinc-900">絞り込み検索</h3>
                                 <button
@@ -167,7 +167,7 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
                                             name="startDate"
                                             value={filters.startDate}
                                             onChange={handleFilterChange}
-                                            className="block w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm text-zinc-900"
+                                            className="block w-full text-sm bg-zinc-50 border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm text-zinc-900"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
@@ -180,7 +180,7 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
                                             name="endDate"
                                             value={filters.endDate}
                                             onChange={handleFilterChange}
-                                            className="block w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm text-zinc-900"
+                                            className="block w-full text-sm bg-zinc-50 border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm text-zinc-900"
                                         />
                                     </div>
                                 </div>
@@ -195,7 +195,7 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
                                         name="callerNumber"
                                         value={filters.callerNumber}
                                         onChange={handleFilterChange}
-                                        className="block w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm text-zinc-900"
+                                        className="block w-full text-sm bg-zinc-50 border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm text-zinc-900"
                                     >
                                         <option value="">全ての発信者</option>
                                         {uniqueCallers.map((number) => (
