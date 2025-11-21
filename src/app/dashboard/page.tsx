@@ -10,7 +10,10 @@ import {
     LayoutDashboard,
     User,
     BarChart3,
+    History,
 } from 'lucide-react'
+import { ConversationViewer, TranscriptItem } from '@/components/ConversationViewer'
+
 
 export default async function DashboardPage() {
     const supabase = await createClient()
@@ -28,6 +31,13 @@ export default async function DashboardPage() {
         .select('*')
         .eq('user_id', user.id)
         .single()
+
+    const { data: callLogs } = await supabase
+        .from('call_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10)
+
 
     return (
         <div className="min-h-screen bg-zinc-50 flex">
@@ -129,6 +139,37 @@ export default async function DashboardPage() {
                         initialGreeting={prompts?.greeting_message || ''}
                         initialDescription={prompts?.business_description || ''}
                     />
+
+                    {/* 通話履歴 */}
+                    <section className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-zinc-200 flex items-center gap-2">
+                            <History className="h-5 w-5 text-indigo-600" />
+                            <h2 className="text-lg font-bold text-zinc-900">通話履歴</h2>
+                        </div>
+                        <div className="divide-y divide-zinc-100">
+                            {callLogs?.map((log: any) => (
+                                <div key={log.id} className="p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-sm font-medium text-zinc-900">
+                                                {new Date(log.created_at).toLocaleString('ja-JP')}
+                                            </div>
+                                            <span className="px-2 py-1 text-xs font-medium bg-zinc-100 text-zinc-600 rounded-full">
+                                                {log.call_sid || 'Unknown ID'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <ConversationViewer transcript={log.transcript as TranscriptItem[]} />
+                                </div>
+                            ))}
+                            {(!callLogs || callLogs.length === 0) && (
+                                <div className="p-10 text-center text-zinc-500">
+                                    通話履歴はまだありません
+                                </div>
+                            )}
+                        </div>
+                    </section>
+
                 </div>
             </main>
         </div>
