@@ -57,6 +57,13 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
   - セッション管理とルート保護
   - 未認証ユーザーのダッシュボードアクセス制限
   - LP (`/`) へのパブリックアクセス許可
+- **電話番号表示**:
+  - ダッシュボード右上（サイドバーおよびモバイルヘッダー）にログインユーザーの電話番号を表示
+  - データソース: `profiles.phone_number` カラム
+  - 電話番号が登録されている場合: 「電話番号：+81-90-xxxx-xxxx」のように表示
+  - 電話番号が未登録の場合: 「電話番号：登録されていません」と表示
+  - コンポーネント: `src/components/UserPhoneDisplay.tsx`
+  - サーバーアクション: `src/app/dashboard/actions.ts` の `fetchUserProfile()`
 
 ## UI/UX改善
 
@@ -153,7 +160,15 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
   3. **Run** ボタンをクリックして実行します。
   4. これにより `call_logs` テーブルと `summary` カラムが追加されます。
   
-  ### 4. テーブル作成の確認
+  ### 5. 電話番号表示機能のセットアップ（追加セットアップ）
+  電話番号表示機能を使用する場合は、以下のSQLファイルも実行してください：
+  
+  1. Supabase ダッシュボードの **SQL Editor** を開きます。
+  2. `../supabase/add_phone_number_column.sql` の内容をコピーし、エディタに貼り付けます。
+  3. **Run** ボタンをクリックして実行します。
+  4. これにより `profiles` テーブルに `phone_number` カラムが追加されます。
+  
+  ### 6. テーブル作成の確認
   左サイドバーの **Table Editor** を開き、以下のテーブルが作成されていることを確認してください：
   
   - `profiles`: ユーザー情報（Stripe IDなど）
@@ -172,6 +187,7 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
    - `stripe_customer_id`: Stripe顧客ID
    - `is_subscribed`: サブスクリプション状態
    - `usage_count`: 利用回数
+   - `phone_number`: 電話番号（国際形式、例：+81-90-1234-5678）
 
 2. **`public.user_prompts`** (AI設定用)
    - `id`: UUID (Primary Key)
@@ -261,3 +277,11 @@ npm run backup
 4. `git push origin main`
 
 ※ AIエージェントは自動でプッシュを行いません。バックアップが必要な場合はこのコマンドを使用してください。
+
+## トラブルシューティング
+
+### 通話要約が表示されない場合
+
+ダッシュボードの通話履歴に「要約なし」と表示され続ける場合、バックエンド（AiLuna Call Engine）側の要約生成処理でエラーが発生している可能性があります。
+特に、`gpt-5.1` などの最新モデルを使用する場合は、バックエンド側のコードが `developer` ロールや `max_completion_tokens` に対応している必要があります。
+正常に生成された場合、Supabaseの `call_logs` テーブルの `summary` カラムにタイトルが保存され、自動的に一覧に反映されます。

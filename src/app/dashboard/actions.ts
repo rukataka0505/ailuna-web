@@ -174,3 +174,27 @@ export async function fetchCallMetrics(): Promise<CallMetrics> {
         totalDurationMinutes
     }
 }
+
+export async function fetchUserProfile() {
+    const supabase = await createClient()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+        return null
+    }
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('phone_number')
+        .eq('id', user.id)
+        .single()
+
+    if (error) {
+        console.error('Error fetching user profile:', error)
+        return null
+    }
+
+    return data
+}
