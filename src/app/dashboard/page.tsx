@@ -14,6 +14,8 @@ import { CallLogList } from '@/components/CallLogList'
 import { Suspense } from 'react'
 import { DashboardMetrics, DashboardMetricsSkeleton } from '@/components/DashboardMetrics'
 import { UserPhoneDisplay } from '@/components/UserPhoneDisplay'
+import { AccountNameDisplay } from '@/components/AccountNameDisplay'
+import { PlanInfoDisplay } from '@/components/PlanInfoDisplay'
 
 
 export default async function DashboardPage() {
@@ -42,11 +44,15 @@ export default async function DashboardPage() {
         <div className="min-h-screen bg-zinc-50 flex">
             {/* サイドバー */}
             <aside className="w-64 bg-white border-r border-zinc-200 hidden md:flex flex-col">
-                <div className="p-6 border-b border-zinc-200">
+                <div className="p-6 border-b border-zinc-200 space-y-3">
                     <div className="flex items-center gap-2 text-indigo-600">
                         <Phone className="h-6 w-6" />
                         <span className="text-xl font-bold text-zinc-900">AiLuna</span>
+                        <div className="ml-auto">
+                            <AccountNameDisplay accountName={userProfile?.account_name} />
+                        </div>
                     </div>
+                    <PlanInfoDisplay />
                 </div>
 
                 <nav className="flex-1 p-4 space-y-1">
@@ -72,9 +78,6 @@ export default async function DashboardPage() {
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-zinc-900 truncate">
                                 {user.email}
-                            </p>
-                            <p className="text-xs text-zinc-500 truncate">
-                                Free Plan
                             </p>
                         </div>
                     </div>
@@ -103,8 +106,10 @@ export default async function DashboardPage() {
                             </button>
                         </form>
                     </div>
-                    <div className="px-4 pb-3 border-t border-zinc-100">
+                    <div className="px-4 pb-3 space-y-2">
+                        <AccountNameDisplay accountName={userProfile?.account_name} />
                         <UserPhoneDisplay phoneNumber={userProfile?.phone_number} />
+                        <PlanInfoDisplay />
                     </div>
                 </div>
 

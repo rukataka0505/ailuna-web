@@ -187,7 +187,7 @@ export async function fetchUserProfile() {
 
     const { data, error } = await supabase
         .from('profiles')
-        .select('phone_number')
+        .select('phone_number, account_name')
         .eq('id', user.id)
         .single()
 

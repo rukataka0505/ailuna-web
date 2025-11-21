@@ -64,6 +64,22 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
   - 電話番号が未登録の場合: 「電話番号：登録されていません」と表示
   - コンポーネント: `src/components/UserPhoneDisplay.tsx`
   - サーバーアクション: `src/app/dashboard/actions.ts` の `fetchUserProfile()`
+- **ダッシュボードヘッダー構成**:
+  - ダッシュボードのヘッダー（サイドバーおよびモバイルヘッダー）は以下の構成になっています：
+  - **ロゴとアカウント名**:
+    - ロゴ「AiLuna」の横にログインユーザーの `account_name` を表示
+    - データソース: `profiles.account_name` カラム
+    - アカウント名が設定されている場合: 「アカウント：{name}」のように表示
+    - アカウント名が未設定の場合: 「アカウント：未設定」と表示
+    - コンポーネント: `src/components/AccountNameDisplay.tsx`
+  - **プラン情報**:
+    - ロゴ／アカウント名の直下に「現在のプラン」と「プロプランへアップグレード」ボタンを配置
+    - デスクトップでは左右に配置、モバイルでは縦並び
+    - コンポーネント: `src/components/PlanInfoDisplay.tsx`
+  - **関連ファイル**:
+    - サーバーアクション: `src/app/dashboard/actions.ts` の `fetchUserProfile()`
+    - ダッシュボードページ: `src/app/dashboard/page.tsx`
+    - マイグレーションSQL: `supabase/add_account_name_column.sql`
 
 ## UI/UX改善
 
@@ -168,7 +184,15 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
   3. **Run** ボタンをクリックして実行します。
   4. これにより `profiles` テーブルに `phone_number` カラムが追加されます。
   
-  ### 6. テーブル作成の確認
+  ### 6. アカウント名表示機能のセットアップ（追加セットアップ）
+  アカウント名表示機能を使用する場合は、以下のSQLファイルも実行してください：
+  
+  1. Supabase ダッシュボードの **SQL Editor** を開きます。
+  2. `../supabase/add_account_name_column.sql` の内容をコピーし、エディタに貼り付けます。
+  3. **Run** ボタンをクリックして実行します。
+  4. これにより `profiles` テーブルに `account_name` カラムが追加されます。
+  
+  ### 7. テーブル作成の確認
   左サイドバーの **Table Editor** を開き、以下のテーブルが作成されていることを確認してください：
   
   - `profiles`: ユーザー情報（Stripe IDなど）
@@ -188,6 +212,7 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
    - `is_subscribed`: サブスクリプション状態
    - `usage_count`: 利用回数
    - `phone_number`: 電話番号（国際形式、例：+81-90-1234-5678）
+   - `account_name`: アカウント名（表示用、例：AiLuna実験店舗）
 
 2. **`public.user_prompts`** (AI設定用)
    - `id`: UUID (Primary Key)
