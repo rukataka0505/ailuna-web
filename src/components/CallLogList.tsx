@@ -143,7 +143,7 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
                         {/* 背景クリックで閉じるためのオーバーレイ */}
                         <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
 
-                        <div className="absolute left-6 right-6 md:left-auto md:right-6 top-full mt-2 md:w-[320px] bg-white p-5 rounded-xl shadow-xl border border-zinc-200 z-50 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="absolute left-6 right-6 md:left-auto md:right-6 bottom-full mb-2 md:w-[320px] bg-white p-5 rounded-xl shadow-xl border border-zinc-200 z-50 animate-in fade-in zoom-in-95 duration-200 origin-bottom">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-semibold text-zinc-900">絞り込み検索</h3>
                                 <button

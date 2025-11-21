@@ -113,7 +113,7 @@ export default async function DashboardPage() {
                     />
 
                     {/* 通話履歴 */}
-                    <section className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+                    <section className="bg-white rounded-xl border border-zinc-200 shadow-sm">
                         {/* ヘッダーは CallLogList 内に移動したため削除 */}
                         <CallLogList 
                             initialLogs={initialLogs || []} 
