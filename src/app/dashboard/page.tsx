@@ -80,7 +80,7 @@ export default async function DashboardPage() {
                         </div>
                     </div>
                     <form action={signOut}>
-                        <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-zinc-500 hover:text-red-600 transition-colors">
+                        <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-zinc-500 hover:text-red-600 transition-all active:scale-95">
                             <LogOut className="h-4 w-4" />
                             ログアウト
                         </button>
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
                         <span className="text-xl font-bold text-zinc-900">AiLuna</span>
                     </div>
                     <form action={signOut}>
-                        <button className="p-2 text-zinc-500">
+                        <button className="p-2 text-zinc-500 transition-all active:scale-95">
                             <LogOut className="h-5 w-5" />
                         </button>
                     </form>
