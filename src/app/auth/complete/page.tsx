@@ -13,19 +13,19 @@ export default function AuthCompletePage() {
                     </div>
 
                     <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                        メールアドレスの確認が完了しました
+                        メール認証が完了しました
                     </h2>
 
                     <p className="text-gray-500 mb-8">
-                        アカウントの認証が完了しました。<br />
-                        ログインしてサービスをご利用いただけます。
+                        このままログインしてマイページを開き、<br />
+                        サービスの利用を開始できます。
                     </p>
 
                     <Link
-                        href="/"
+                        href="/dashboard"
                         className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all active:scale-[0.96]"
                     >
-                        ログインページへ戻る
+                        ログインしてマイページを開く
                         <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                 </div>
