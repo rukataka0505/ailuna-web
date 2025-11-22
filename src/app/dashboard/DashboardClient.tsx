@@ -183,9 +183,9 @@ export function DashboardClient({
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 md:pl-72 transition-all duration-300">
+            <main className="flex-1 md:pl-72 pt-[60px] md:pt-0 transition-all duration-300">
                 {/* Top Header */}
-                <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-zinc-200/60 px-6 py-3 flex items-center justify-between">
+                <header className="hidden md:flex sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-zinc-200/60 px-6 py-3 items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="hidden md:flex items-center gap-2 text-zinc-500">
                             <LayoutDashboard className="h-4 w-4" />
