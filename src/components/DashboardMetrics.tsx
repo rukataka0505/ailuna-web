@@ -1,9 +1,10 @@
-import { Phone, BarChart3 } from 'lucide-react'
+import { Phone, BarChart3, CreditCard } from 'lucide-react'
 import { fetchCallMetrics } from '@/app/dashboard/actions'
 
 export interface DashboardMetricsData {
     totalCalls: number
     totalDurationMinutes: number
+    currentMonthBilling: number
 }
 
 export function DashboardMetricsView({ metrics }: { metrics: DashboardMetricsData }) {
@@ -25,19 +26,32 @@ export function DashboardMetricsView({ metrics }: { metrics: DashboardMetricsDat
                 <div className="text-2xl font-bold text-zinc-900">{metrics.totalDurationMinutes.toFixed(1)}分</div>
                 <p className="text-xs text-zinc-500 mt-1">残り無料枠: 60分</p>
             </div>
+            <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-medium text-zinc-500">今月の請求額</h3>
+                    <CreditCard className="h-5 w-5 text-indigo-600" />
+                </div>
+                <div className="text-2xl font-bold text-zinc-900">¥{metrics.currentMonthBilling.toLocaleString()}</div>
+                <p className="text-xs text-zinc-500 mt-1">※ 請求計算ロジックは今後実装予定です。</p>
+            </div>
         </section>
     )
 }
 
 export async function DashboardMetrics() {
     const metrics = await fetchCallMetrics()
-    return <DashboardMetricsView metrics={metrics} />
+    // TODO: 今月の通話時間と料金設定から実際の請求額を計算する
+    const metricsWithBilling = {
+        ...metrics,
+        currentMonthBilling: 0
+    }
+    return <DashboardMetricsView metrics={metricsWithBilling} />
 }
 
 export function DashboardMetricsSkeleton() {
     return (
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[1, 2].map((i) => (
+            {[1, 2, 3].map((i) => (
                 <div key={i} className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm animate-pulse">
                     <div className="flex items-center justify-between mb-4">
                         <div className="h-4 w-24 bg-zinc-100 rounded"></div>

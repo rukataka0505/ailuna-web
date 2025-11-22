@@ -25,12 +25,16 @@ export default async function DashboardPage() {
     const uniqueCallers = await fetchUniqueCallerNumbers()
     const userProfile = await fetchUserProfile()
     const metrics = await fetchCallMetrics()
+    const metricsWithBilling = {
+        ...metrics,
+        currentMonthBilling: 0
+    }
 
     return (
         <DashboardClient
             userEmail={user.email || ''}
             userProfile={userProfile}
-            metrics={metrics}
+            metrics={metricsWithBilling}
             prompts={prompts}
             initialLogs={initialLogs || []}
             initialCount={initialCount || 0}

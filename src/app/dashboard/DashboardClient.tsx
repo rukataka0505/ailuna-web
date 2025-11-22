@@ -108,8 +108,8 @@ export function DashboardClient({
                                 setIsMobileMenuOpen(false)
                             }}
                             className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${isActive
-                                    ? 'text-indigo-600 bg-indigo-50'
-                                    : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
+                                ? 'text-indigo-600 bg-indigo-50'
+                                : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
                                 }`}
                         >
                             <Icon className="h-5 w-5" />
@@ -174,7 +174,8 @@ export function DashboardClient({
             )}
 
             {/* Mobile Drawer */}
-            <div className={`md:hidden fixed inset-y-0 left-0 w-64 bg-white shadow-xl z-40 transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+            {/* Mobile Drawer */}
+            <div className={`md:hidden fixed inset-y-0 right-0 w-64 bg-white shadow-xl z-40 transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
                 }`}>
                 <SidebarContent />
             </div>
