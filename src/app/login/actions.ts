@@ -36,8 +36,14 @@ export async function signup(formData: FormData): Promise<{ error: string } | { 
 
     const email = formData.get('email') as string
     const password = formData.get('password') as string
-    const fullName = formData.get('fullName') as string
+    const lastName = formData.get('lastName') as string
+    const firstName = formData.get('firstName') as string
     const accountName = formData.get('accountName') as string
+
+    // Combine lastName and firstName into full_name
+    const fullName = `${lastName} ${firstName}`
+
+    console.log('Signup data:', { email, fullName, accountName })
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -54,6 +60,7 @@ export async function signup(formData: FormData): Promise<{ error: string } | { 
 
     // Update profiles table with full name and account name
     if (authData.user) {
+        console.log('Updating profile for user:', authData.user.id)
         const { error: profileError } = await supabase
             .from('profiles')
             .update({
@@ -66,6 +73,8 @@ export async function signup(formData: FormData): Promise<{ error: string } | { 
             console.error('Profile update error:', profileError)
             // Note: User is created but profile update failed
             // They can still login, but may need to set these fields later
+        } else {
+            console.log('Profile updated successfully with:', { full_name: fullName, account_name: accountName })
         }
     }
 
