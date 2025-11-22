@@ -31,6 +31,9 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
     - 登録完了後、`profiles` テーブルに以下が自動保存されます：
       - `full_name`: 「氏」と「名」を結合した文字列（例：「大塚 孝雄」）
       - `account_name`: 入力されたアカウント名（例：「大塚ラーメン本店」）
+    - **実装詳細**:
+      - `src/components/AuthForm.tsx`: フォーム入力のハンドリング
+      - `src/app/login/actions.ts`: `signup` サーバーアクション内で、Supabase Admin クライアントを使用して `profiles` テーブルを更新（RLS回避のため）
   - **メール認証フロー**:
     - 認証リンククリック後、`/auth/complete`（完了画面）へ遷移
     - 完了画面から「ログインページへ戻る」ボタンでトップページへ移動し、ログインを行うフロー

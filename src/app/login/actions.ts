@@ -39,51 +39,6 @@ export async function signup(formData: FormData): Promise<{ error: string } | { 
     const lastName = formData.get('lastName') as string
     const firstName = formData.get('firstName') as string
     const accountName = formData.get('accountName') as string
-
-    // Combine lastName and firstName into full_name
-    const fullName = `${lastName} ${firstName}`
-
-    console.log('Signup data:', { email, fullName, accountName })
-
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-            emailRedirectTo: `${origin}/auth/callback`,
-        },
-    })
-
-    if (authError) {
-        console.error('Signup error:', authError)
-        return { error: '登録に失敗しました。別のメールアドレスをお試しください。' }
-    }
-
-    // Update profiles table with full name and account name
-    if (authData.user) {
-        console.log('Updating profile for user:', authData.user.id)
-        const { error: profileError } = await supabase
-            .from('profiles')
-            .update({
-                full_name: fullName,
-                account_name: accountName,
-            })
-            .eq('id', authData.user.id)
-
-        if (profileError) {
-            console.error('Profile update error:', profileError)
-            // Note: User is created but profile update failed
-            // They can still login, but may need to set these fields later
-        } else {
-            console.log('Profile updated successfully with:', { full_name: fullName, account_name: accountName })
-        }
-    }
-
-    revalidatePath('/', 'layout')
-    return { success: true }
-}
-
-export async function resetPassword(formData: FormData): Promise<{ error: string } | { success: true }> {
-    const supabase = await createClient()
     const origin = (await headers()).get('origin')
 
     const email = formData.get('email') as string
