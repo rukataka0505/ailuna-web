@@ -29,7 +29,7 @@ export function ConversationViewer({ transcript }: ConversationViewerProps) {
                 return (
                     <div
                         key={index}
-                        className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'
+                        className={`flex items-start gap-3 ${isUser ? 'flex-row' : 'flex-row-reverse'
                             }`}
                     >
                         <div
@@ -40,13 +40,13 @@ export function ConversationViewer({ transcript }: ConversationViewerProps) {
                         </div>
 
                         <div
-                            className={`flex flex-col max-w-[80%] ${isUser ? 'items-end' : 'items-start'
+                            className={`flex flex-col max-w-[80%] ${isUser ? 'items-start' : 'items-end'
                                 }`}
                         >
                             <div
                                 className={`px-4 py-2 rounded-2xl text-sm ${isUser
-                                        ? 'bg-indigo-600 text-white rounded-tr-none'
-                                        : 'bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm'
+                                    ? 'bg-indigo-600 text-white rounded-tl-none'
+                                    : 'bg-white border border-zinc-200 text-zinc-800 rounded-tr-none shadow-sm'
                                     }`}
                             >
                                 {item.text}
