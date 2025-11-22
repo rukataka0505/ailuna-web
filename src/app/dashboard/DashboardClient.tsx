@@ -142,14 +142,23 @@ export function DashboardClient({
             </aside>
 
             {/* Mobile Header */}
-            <div className="md:hidden fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-zinc-200 z-20 px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-indigo-600">
+            <div className="md:hidden fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-zinc-200 z-20 px-4 py-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-indigo-600 shrink-0">
                     <Phone className="h-6 w-6" />
-                    <span className="text-xl font-bold text-zinc-900">AiLuna</span>
+                    <span className="text-xl font-bold text-zinc-900 hidden sm:inline">AiLuna</span>
                 </div>
+
+                <div className="flex-1 flex justify-end mr-2">
+                    <UserProfileChip
+                        accountName={userProfile?.account_name}
+                        phoneNumber={userProfile?.phone_number}
+                        className="scale-90 origin-right"
+                    />
+                </div>
+
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="p-2 text-zinc-600 hover:bg-zinc-50 rounded-lg active:scale-95 transition-transform"
+                    className="p-2 text-zinc-600 hover:bg-zinc-50 rounded-lg active:scale-95 transition-transform shrink-0"
                 >
                     {isMobileMenuOpen ? (
                         <X className="h-6 w-6" />
@@ -178,16 +187,6 @@ export function DashboardClient({
                 {/* Top Header */}
                 <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-zinc-200/60 px-6 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="md:hidden">
-                            {/* Mobile Menu Trigger is in the fixed header, but we might need a spacer or something here if we want consistency. 
-                                For now, the fixed mobile header handles the menu. 
-                                This header is for Desktop mainly, but visible on mobile below the fixed header? 
-                                Actually, on mobile, the fixed header is already there. 
-                                Let's hide this header on mobile or adjust. 
-                                User request: "Header: Left Logo+Label, Right Profile Chip".
-                                Let's make this header visible on Desktop. On mobile, we have the existing fixed header.
-                            */}
-                        </div>
                         <div className="hidden md:flex items-center gap-2 text-zinc-500">
                             <LayoutDashboard className="h-4 w-4" />
                             <span className="text-sm font-medium">マイページ</span>
@@ -198,6 +197,7 @@ export function DashboardClient({
                         <UserProfileChip
                             accountName={userProfile?.account_name}
                             phoneNumber={userProfile?.phone_number}
+                            className="pl-4 border-l border-zinc-200"
                         />
                     </div>
                 </header>
