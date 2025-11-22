@@ -49,7 +49,7 @@ export async function signup(formData: FormData): Promise<{ error: string } | { 
         email,
         password,
         options: {
-            emailRedirectTo: `${origin}/auth/callback`,
+            emailRedirectTo: `${origin}/auth/complete`,
             data: {
                 full_name: fullName,
                 account_name: accountName,
@@ -73,7 +73,7 @@ export async function resetPassword(formData: FormData): Promise<{ error: string
     const email = formData.get('email') as string
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${origin}/auth/callback?next=/auth/update-password`,
+        redirectTo: `${origin}/auth/complete?next=/auth/update-password`,
     })
 
     if (error) {

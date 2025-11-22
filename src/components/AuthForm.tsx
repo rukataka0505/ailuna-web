@@ -7,8 +7,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 type FormMode = 'login' | 'signup' | 'reset'
 
-export default function AuthForm() {
-    const [mode, setMode] = useState<FormMode>('login')
+interface AuthFormProps {
+    initialMode?: FormMode
+}
+
+export default function AuthForm({ initialMode = 'login' }: AuthFormProps) {
+    const [mode, setMode] = useState<FormMode>(initialMode)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
