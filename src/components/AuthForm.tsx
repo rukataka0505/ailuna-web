@@ -287,7 +287,7 @@ export default function AuthForm() {
                                                     type="text"
                                                     required
                                                     className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-gray-900 bg-white"
-                                                    placeholder="例：大塚"
+                                                    placeholder="大塚"
                                                 />
                                             </div>
                                         </div>
@@ -304,7 +304,7 @@ export default function AuthForm() {
                                                     type="text"
                                                     required
                                                     className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-gray-900 bg-white"
-                                                    placeholder="例：孝雄"
+                                                    placeholder="孝雄"
                                                 />
                                             </div>
                                         </div>
@@ -330,7 +330,7 @@ export default function AuthForm() {
                                                 type="text"
                                                 required
                                                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-gray-900 bg-white"
-                                                placeholder="例：大塚ラーメン本店"
+                                                placeholder="例：大塚家具塩尻店"
                                             />
                                         </div>
                                     </motion.div>
