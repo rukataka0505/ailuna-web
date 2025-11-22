@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/components/Header'
+import Footer from '@/components/Footer'
 import { Phone, MessageSquare, Settings, BarChart3, ArrowRight } from 'lucide-react'
 
 export default async function Home() {
@@ -13,10 +14,10 @@ export default async function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex-grow">
         {/* Hero Section */}
         <div className="mt-10 sm:mt-12 md:mt-16 lg:mt-20 xl:mt-28">
           <div className="text-center">
@@ -115,6 +116,8 @@ export default async function Home() {
           </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   )
 }

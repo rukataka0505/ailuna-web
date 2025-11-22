@@ -1,5 +1,6 @@
 import AuthForm from '@/components/AuthForm'
 import Header from '@/components/Header'
+import Footer from '@/components/Footer'
 
 type FormMode = 'login' | 'signup' | 'reset'
 
@@ -13,10 +14,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     const initialMode: FormMode = mode === 'signup' || mode === 'login' || mode === 'reset' ? mode : 'login'
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col">
             <Header />
 
-            <div className="flex min-h-[calc(100vh-88px)] flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-grow flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
                 <div className="sm:mx-auto sm:w-full sm:max-w-md mb-8">
                     <h1 className="text-center text-4xl font-extrabold text-gray-900 mb-2">
                         AiLuna
@@ -28,6 +29,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
                 <AuthForm initialMode={initialMode} />
             </div>
+
+            <Footer />
         </div>
     )
 }

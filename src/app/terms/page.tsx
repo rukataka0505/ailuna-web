@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import Footer from '@/components/Footer'
 
 export const metadata = {
     title: '利用規約 - AiLuna',
@@ -8,8 +9,8 @@ export const metadata = {
 
 export default function TermsPage() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-grow">
                 {/* Back to Home Link */}
                 <Link
                     href="/"
@@ -142,6 +143,8 @@ export default function TermsPage() {
                     </div>
                 </div>
             </div>
+
+            <Footer />
         </div>
     )
 }
