@@ -45,8 +45,8 @@ export function ConversationViewer({ transcript }: ConversationViewerProps) {
                         >
                             <div
                                 className={`px-4 py-2 rounded-2xl text-sm ${isUser
-                                    ? 'bg-indigo-600 text-white rounded-tl-none'
-                                    : 'bg-white border border-zinc-200 text-zinc-800 rounded-tr-none shadow-sm'
+                                    ? 'bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm'
+                                    : 'bg-indigo-600 text-white rounded-tr-none'
                                     }`}
                             >
                                 {item.text}
