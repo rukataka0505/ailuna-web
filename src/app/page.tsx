@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import AuthForm from '@/components/AuthForm'
-import { Phone, Shield, Zap } from 'lucide-react'
+import { Phone, MessageSquare, Settings, BarChart3 } from 'lucide-react'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -31,13 +31,14 @@ export default async function Home() {
                   AI電話取次サービス
                 </span>
                 <span className="mt-1 block text-4xl tracking-tight font-extrabold sm:text-5xl xl:text-6xl">
-                  <span className="block text-gray-900">電話対応は</span>
-                  <span className="block text-indigo-600">AIにお任せください</span>
+                  <span className="block text-gray-900">電話対応をAIに任せて</span>
+                  <span className="block text-indigo-600">あとからチャットで振り返る</span>
                 </span>
               </h1>
               <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
-                AiLuna（アイルナ）は、あなたの代わりに電話に応答し、要件を聞き取り、即座に通知する次世代のAI電話番です。
-                もう重要な電話を逃したり、営業電話に時間を取られることはありません。
+                AiLuna（アイルナ）は、AIがあなたの代わりに電話対応。
+                通話内容はチャット形式で確認でき、AIへの指示も自由に編集できます。
+                お店に合わせたAIオペレーターを、今すぐ無料で試せます。
               </p>
 
               <div className="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
@@ -45,24 +46,36 @@ export default async function Home() {
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="flex items-center justify-center h-10 w-10 rounded-md bg-indigo-500 text-white">
-                        <Zap className="h-6 w-6" />
+                        <MessageSquare className="h-6 w-6" />
                       </div>
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-lg font-medium text-gray-900">即時応答・通知</h3>
-                      <p className="text-gray-500">24時間365日、待ち時間なしで対応します。</p>
+                      <h3 className="text-lg font-medium text-gray-900">トーク形式で通話を確認</h3>
+                      <p className="text-gray-500">電話の内容を、LINEのようなチャット形式で振り返れます。いつ・誰が・何を話したか一目瞭然。</p>
                     </div>
                   </div>
 
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="flex items-center justify-center h-10 w-10 rounded-md bg-indigo-500 text-white">
-                        <Shield className="h-6 w-6" />
+                        <Settings className="h-6 w-6" />
                       </div>
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-lg font-medium text-gray-900">迷惑電話ブロック</h3>
-                      <p className="text-gray-500">営業電話や迷惑電話を自動でフィルタリング。</p>
+                      <h3 className="text-lg font-medium text-gray-900">AIの話し方を自分で編集</h3>
+                      <p className="text-gray-500">挨拶や対応方法をダッシュボードから簡単にカスタマイズ。お店ごとのAIオペレーターが作れます。</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="flex items-center justify-center h-10 w-10 rounded-md bg-indigo-500 text-white">
+                        <BarChart3 className="h-6 w-6" />
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-lg font-medium text-gray-900">着信状況をひと目で把握</h3>
+                      <p className="text-gray-500">着信件数・利用時間・今月の請求額など、必要な情報がダッシュボードに集約されています。</p>
                     </div>
                   </div>
                 </div>
