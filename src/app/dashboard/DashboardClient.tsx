@@ -11,8 +11,7 @@ import {
     X,
     LogOut
 } from 'lucide-react'
-import { AccountInfoCard } from '@/components/AccountInfoCard'
-import { PlanInfoDisplay } from '@/components/PlanInfoDisplay'
+import { UserProfileChip } from '@/components/UserProfileChip'
 import { DashboardSection } from './sections/DashboardSection'
 import { AccountSection } from './sections/AccountSection'
 import { PlanSection } from './sections/PlanSection'
@@ -84,16 +83,11 @@ export function DashboardClient({
 
     const SidebarContent = () => (
         <div className="flex flex-col h-full bg-white">
-            <div className="p-6 border-b border-zinc-100 space-y-6">
+            <div className="p-6 border-b border-zinc-100">
                 <div className="flex items-center gap-2 text-indigo-600 px-2">
                     <Phone className="h-6 w-6" />
                     <span className="text-xl font-bold text-zinc-900">AiLuna</span>
                 </div>
-                <AccountInfoCard
-                    accountName={userProfile?.account_name}
-                    phoneNumber={userProfile?.phone_number}
-                />
-                <PlanInfoDisplay />
             </div>
 
             <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
@@ -180,8 +174,35 @@ export function DashboardClient({
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 md:pl-72 pt-[60px] md:pt-0 transition-all duration-300">
-                <div className="max-w-6xl mx-auto p-6 lg:p-10 space-y-8">
+            <main className="flex-1 md:pl-72 transition-all duration-300">
+                {/* Top Header */}
+                <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-zinc-200/60 px-6 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="md:hidden">
+                            {/* Mobile Menu Trigger is in the fixed header, but we might need a spacer or something here if we want consistency. 
+                                For now, the fixed mobile header handles the menu. 
+                                This header is for Desktop mainly, but visible on mobile below the fixed header? 
+                                Actually, on mobile, the fixed header is already there. 
+                                Let's hide this header on mobile or adjust. 
+                                User request: "Header: Left Logo+Label, Right Profile Chip".
+                                Let's make this header visible on Desktop. On mobile, we have the existing fixed header.
+                            */}
+                        </div>
+                        <div className="hidden md:flex items-center gap-2 text-zinc-500">
+                            <LayoutDashboard className="h-4 w-4" />
+                            <span className="text-sm font-medium">マイページ</span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <UserProfileChip
+                            accountName={userProfile?.account_name}
+                            phoneNumber={userProfile?.phone_number}
+                        />
+                    </div>
+                </header>
+
+                <div className="max-w-6xl mx-auto p-6 lg:p-10 space-y-8 pt-6 md:pt-10">
                     {renderContent()}
                 </div>
             </main>
