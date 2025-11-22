@@ -33,7 +33,8 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
       - `account_name`: 入力されたアカウント名（例：「大塚ラーメン本店」）
     - **実装詳細**:
       - `src/components/AuthForm.tsx`: フォーム入力のハンドリング
-      - `src/app/login/actions.ts`: `signup` サーバーアクション内で、Supabase Admin クライアントを使用して `profiles` テーブルを更新（RLS回避のため）
+      - `src/app/login/actions.ts`: `signup` サーバーアクション内で、Supabase Auth の `options.data` に `full_name` と `account_name` を渡す
+      - **Supabase Trigger**: `handle_new_user` 関数がトリガーされ、メタデータから `profiles` テーブルに値を自動挿入（`supabase/update_handle_new_user.sql` の適用が必要）
   - **メール認証フロー**:
     - 認証リンククリック後、`/auth/complete`（完了画面）へ遷移
     - 完了画面から「ログインページへ戻る」ボタンでトップページへ移動し、ログインを行うフロー
