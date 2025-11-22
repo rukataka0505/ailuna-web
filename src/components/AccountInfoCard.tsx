@@ -11,24 +11,20 @@ export function AccountInfoCard({ accountName, phoneNumber }: AccountInfoCardPro
     const isPhoneRegistered = !!phoneNumber
 
     return (
-        <div className="flex items-center gap-3 flex-wrap text-sm">
-            {/* アカウント名 */}
-            <div className="flex items-center gap-1.5">
-                <User className="h-4 w-4 text-zinc-400" />
-                <span className="font-medium text-zinc-900">
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 border border-zinc-100">
+            <div className="h-10 w-10 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-400 shadow-sm">
+                <User className="h-5 w-5" />
+            </div>
+            <div className="flex flex-col min-w-0">
+                <span className="font-semibold text-zinc-900 text-sm truncate">
                     {displayAccountName}
                 </span>
-            </div>
-
-            {/* 区切り */}
-            <span className="text-zinc-300">・</span>
-
-            {/* 電話番号 */}
-            <div className="flex items-center gap-1.5">
-                <Phone className={`h-4 w-4 ${isPhoneRegistered ? 'text-zinc-400' : 'text-zinc-300'}`} />
-                <span className={isPhoneRegistered ? 'text-zinc-600' : 'text-zinc-400'}>
-                    {displayPhoneNumber}
-                </span>
+                <div className="flex items-center gap-1 text-xs text-zinc-500">
+                    <Phone className="h-3 w-3" />
+                    <span className="truncate">
+                        {displayPhoneNumber}
+                    </span>
+                </div>
             </div>
         </div>
     )

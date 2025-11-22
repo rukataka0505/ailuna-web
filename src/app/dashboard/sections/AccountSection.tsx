@@ -8,9 +8,9 @@ export function AccountSection() {
                 <p className="text-zinc-500">アカウント情報の確認・変更ができます。</p>
             </div>
 
-            <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
+            <div className="bg-white p-8 rounded-2xl border border-zinc-100 shadow-sm">
                 <div className="space-y-4">
-                    <div className="p-4 bg-zinc-50 rounded-lg border border-zinc-100 text-center text-zinc-500">
+                    <div className="p-6 bg-zinc-50 rounded-xl border border-zinc-100 text-center text-zinc-500">
                         <p>アカウント編集機能は現在開発中です。</p>
                     </div>
                 </div>

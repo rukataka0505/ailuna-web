@@ -33,7 +33,7 @@ export function DashboardForm({ initialGreeting, initialDescription }: Dashboard
                 )}
             </div>
 
-            <form action={formAction} className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+            <form action={formAction} className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
                 <div className="p-6 space-y-6">
                     <div>
                         <label className="block text-sm font-medium text-zinc-900 mb-2">

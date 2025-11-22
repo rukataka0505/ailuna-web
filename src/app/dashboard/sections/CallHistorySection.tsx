@@ -16,7 +16,7 @@ export function CallHistorySection({ initialLogs, initialCount, uniqueCallers }:
                 <p className="text-zinc-500">過去の着信履歴と通話内容を確認できます。</p>
             </div>
 
-            <div className="bg-white rounded-xl border border-zinc-200 shadow-sm">
+            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm overflow-hidden">
                 <CallLogList
                     initialLogs={initialLogs}
                     initialCount={initialCount}
