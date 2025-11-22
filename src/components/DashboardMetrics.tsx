@@ -1,9 +1,12 @@
 import { Phone, BarChart3 } from 'lucide-react'
 import { fetchCallMetrics } from '@/app/dashboard/actions'
 
-export async function DashboardMetrics() {
-    const metrics = await fetchCallMetrics()
+export interface DashboardMetricsData {
+    totalCalls: number
+    totalDurationMinutes: number
+}
 
+export function DashboardMetricsView({ metrics }: { metrics: DashboardMetricsData }) {
     return (
         <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
@@ -24,6 +27,11 @@ export async function DashboardMetrics() {
             </div>
         </section>
     )
+}
+
+export async function DashboardMetrics() {
+    const metrics = await fetchCallMetrics()
+    return <DashboardMetricsView metrics={metrics} />
 }
 
 export function DashboardMetricsSkeleton() {
