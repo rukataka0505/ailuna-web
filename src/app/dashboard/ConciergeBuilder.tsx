@@ -1,5 +1,25 @@
 'use client'
 
+/**
+ * Setup Concierge - AI電話番の対話型設定コンポーネント
+ * 
+ * このコンポーネントは、ユーザーとAIの対話を通じてAI電話番の設定を生成します。
+ * 
+ * ## 設計方針：単一設定のプレビュー
+ * プレビューエリアは常に「現在の1つの設定」のみを表示します。
+ * 過去バージョンとの比較や before/after 表示は意図的に含まれていません。
+ * 
+ * ## データフロー
+ * 1. ユーザーがチャットでヒアリング
+ * 2. 「設定を生成」→ API呼び出し → currentSettings に保存
+ * 3. プレビューエリアが自動更新（Visual/Codeタブで同じ設定を異なる形式で表示）
+ * 4. 「保存」→ DBに保存
+ * 
+ * ## 将来のバージョン管理について
+ * もし将来的にバージョン管理や設定の比較機能が必要になった場合は、
+ * 別画面・別コンポーネントとして設計することを推奨します。
+ */
+
 import { useState, useRef, useEffect } from 'react'
 import { AgentSettings, ConfigMetadata } from '@/types/agent'
 import { Send, Sparkles, Save, Loader2, Bot, User } from 'lucide-react'
@@ -24,6 +44,14 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     const [isGenerating, setIsGenerating] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [isLoadingHistory, setIsLoadingHistory] = useState(true)
+
+    /**
+     * 現在の設定（単一）
+     * プレビューエリアに表示される唯一の設定オブジェクトです。
+     * 設定生成時に更新され、保存時にDBに永続化されます。
+     * 
+     * 注意: 比較用の「旧設定」や「新設定」などの状態は持ちません。
+     */
     const [currentSettings, setCurrentSettings] = useState<AgentSettings>(initialSettings)
     const [activeTab, setActiveTab] = useState<'visual' | 'code'>('visual')
     const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -228,6 +256,16 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
             </div>
 
             {/* Right Side: Settings Preview Area */}
+            {/* 
+                設定プレビューエリア
+                
+                このエリアは常に「現在の1つの設定」のみを表示します。
+                - Visual タブ: config_metadata から抽出した情報をカード形式で表示
+                - Code タブ: system_prompt の全文を Raw 形式で表示
+                
+                過去バージョンとの比較や before/after 表示は含まれていません。
+                これは意図的な設計です。
+            */}
             <div className="w-full lg:w-[400px] bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col">
                 <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex flex-col gap-3">
                     <div className="flex justify-between items-center">
