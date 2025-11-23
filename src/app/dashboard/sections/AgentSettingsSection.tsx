@@ -1,24 +1,23 @@
 'use client'
 
-import { DashboardForm } from '../DashboardForm'
+import { ConciergeBuilder } from '../ConciergeBuilder'
+import { AgentSettings } from '@/types/agent'
 
 interface AgentSettingsSectionProps {
-    initialGreeting: string
-    initialDescription: string
+    settings: AgentSettings
 }
 
-export function AgentSettingsSection({ initialGreeting, initialDescription }: AgentSettingsSectionProps) {
+export function AgentSettingsSection({ settings }: AgentSettingsSectionProps) {
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 h-full flex flex-col">
             <div>
                 <h2 className="text-2xl font-bold text-zinc-900">AIエージェント設定</h2>
-                <p className="text-zinc-500">電話応対AIの振る舞いや発話内容を設定できます。</p>
+                <p className="text-zinc-500">対話形式でAIの振る舞いを設定できます。</p>
             </div>
 
-            <DashboardForm
-                initialGreeting={initialGreeting}
-                initialDescription={initialDescription}
-            />
+            <div className="flex-1">
+                <ConciergeBuilder initialSettings={settings} />
+            </div>
         </div>
     )
 }

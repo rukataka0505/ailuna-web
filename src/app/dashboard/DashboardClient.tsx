@@ -21,11 +21,15 @@ import { DashboardMetricsData } from '@/components/DashboardMetrics'
 
 type Tab = 'dashboard' | 'account' | 'plan' | 'agent' | 'history'
 
+import { AgentSettings } from '@/types/agent'
+
+// ... existing imports
+
 interface DashboardClientProps {
     userEmail: string
     userProfile: any
     metrics: DashboardMetricsData
-    prompts: any
+    prompts: AgentSettings
     initialLogs: any[]
     initialCount: number
     uniqueCallers: string[]
@@ -64,8 +68,7 @@ export function DashboardClient({
             case 'agent':
                 return (
                     <AgentSettingsSection
-                        initialGreeting={prompts?.greeting_message || ''}
-                        initialDescription={prompts?.business_description || ''}
+                        settings={prompts}
                     />
                 )
             case 'history':
@@ -80,6 +83,7 @@ export function DashboardClient({
                 return null
         }
     }
+    // ... rest of the file
 
     const SidebarContent = () => (
         <div className="flex flex-col h-full bg-white">

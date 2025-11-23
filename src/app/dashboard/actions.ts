@@ -10,7 +10,12 @@ export async function signOut() {
     redirect('/')
 }
 
-export async function updateUserPrompts(prevState: any, formData: FormData) {
+import { ConfigMetadata } from '@/types/agent'
+
+export async function saveAgentSettings(
+    systemPrompt: string,
+    configMetadata: ConfigMetadata
+) {
     const supabase = await createClient()
 
     const {
@@ -21,23 +26,20 @@ export async function updateUserPrompts(prevState: any, formData: FormData) {
         redirect('/login')
     }
 
-    const greeting_message = formData.get('greeting_message') as string
-    const business_description = formData.get('business_description') as string
-
     const { error } = await supabase
         .from('user_prompts')
         .upsert(
             {
                 user_id: user.id,
-                greeting_message,
-                business_description,
+                system_prompt: systemPrompt,
+                config_metadata: configMetadata, // Note: DB schema update required for this column if not exists, or it might be JSONB
                 updated_at: new Date().toISOString()
             },
             { onConflict: 'user_id' }
         )
 
     if (error) {
-        console.error('Error updating prompts:', error)
+        console.error('Error saving agent settings:', error)
         return { error: '設定の保存に失敗しました。' }
     }
 

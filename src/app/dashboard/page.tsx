@@ -4,6 +4,10 @@ import { signOut, fetchCallLogsPaginated, fetchUniqueCallerNumbers, fetchUserPro
 import { DashboardClient } from './DashboardClient'
 
 
+import { AgentSettings } from '@/types/agent'
+
+// ... existing imports
+
 export default async function DashboardPage() {
     const supabase = await createClient()
 
@@ -15,11 +19,14 @@ export default async function DashboardPage() {
         redirect('/login')
     }
 
-    const { data: prompts } = await supabase
+    const { data: promptsData } = await supabase
         .from('user_prompts')
         .select('*')
         .eq('user_id', user.id)
         .single()
+
+    // Cast to AgentSettings for now, assuming DB schema migration will happen later
+    const prompts = (promptsData || { system_prompt: '', config_metadata: {} }) as unknown as AgentSettings
 
     const { logs: initialLogs, count: initialCount } = await fetchCallLogsPaginated(0, 10)
     const uniqueCallers = await fetchUniqueCallerNumbers()
