@@ -22,7 +22,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { AgentSettings, ConfigMetadata } from '@/types/agent'
-import { Send, Sparkles, Save, Loader2, Bot, User } from 'lucide-react'
+import { Send, Sparkles, Save, Loader2, Bot, User, RotateCcw, Trash2 } from 'lucide-react'
 import { saveAgentSettings } from './actions'
 
 interface ConciergeBuilderProps {
@@ -35,9 +35,20 @@ type Message = {
     timestamp: string
 }
 
+const BLANK_SETTINGS: AgentSettings = {
+    system_prompt: '',
+    config_metadata: {
+        tone: 'polite',
+        greeting_message: '',
+        business_description: '',
+        rules: [],
+        business_type: ''
+    }
+}
+
 export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'assistant', content: 'こんにちは！AiLunaのセットアップコンシェルジュです。あなたの会社の電話番AIを作成するために、いくつか質問をさせてください。まず、どのような業種・ビジネスをされていますか？', timestamp: new Date().toISOString() }
+        { role: 'assistant', content: 'こんにちは！AiLunaのセットアップコンシェルジュです。あなたの会社の電話番AIを作成するために、いくつか質問をさせてください。まず、電話に出た際の「最初の挨拶」を決めましょう。どのような挨拶にしますか？', timestamp: new Date().toISOString() }
     ])
     const [input, setInput] = useState('')
     const [isChatLoading, setIsChatLoading] = useState(false)
@@ -178,6 +189,35 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
         }
     }
 
+    const handleResetConversation = async () => {
+        if (!window.confirm('会話履歴がすべて消去されますが、よろしいですか？\nこの操作は取り消せません。')) {
+            return
+        }
+
+        const initialMessage: Message = {
+            role: 'assistant',
+            content: 'こんにちは！AiLunaのセットアップコンシェルジュです。あなたの会社の電話番AIを作成するために、いくつか質問をさせてください。まず、電話に出た際の「最初の挨拶」を決めましょう。どのような挨拶にしますか？',
+            timestamp: new Date().toISOString()
+        }
+
+        setMessages([initialMessage])
+
+        // Reset history in DB
+        try {
+            await saveHistory([initialMessage])
+        } catch (error) {
+            console.error('Failed to reset history:', error)
+        }
+    }
+
+    const handleResetSettings = () => {
+        if (!window.confirm('生成された設定がすべて破棄されますが、よろしいですか？\n保存されていない変更は失われます。')) {
+            return
+        }
+        setCurrentSettings(BLANK_SETTINGS)
+        setActiveTab('visual')
+    }
+
     return (
         <div className="flex flex-col lg:flex-row h-[calc(100vh-200px)] gap-6">
             {/* Left Side: Chat UI Area */}
@@ -187,14 +227,24 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                         <h3 className="font-semibold text-zinc-900">対話型セットアップ</h3>
                         <p className="text-xs text-zinc-500">AIと会話して設定を作りましょう</p>
                     </div>
-                    <button
-                        onClick={handleGenerateSettings}
-                        disabled={isGenerating || messages.length < 3}
-                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                        設定を生成する
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleResetConversation}
+                            disabled={isGenerating || isChatLoading || messages.length <= 1}
+                            className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="会話をリセット"
+                        >
+                            <RotateCcw className="h-4 w-4" />
+                        </button>
+                        <button
+                            onClick={handleGenerateSettings}
+                            disabled={isGenerating || messages.length < 3}
+                            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                            設定を生成する
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex-1 p-4 overflow-y-auto bg-zinc-50/30 space-y-4">
@@ -273,6 +323,17 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             <h3 className="font-semibold text-zinc-900">設定プレビュー</h3>
                             <p className="text-xs text-zinc-500">生成された設定を確認・保存</p>
                         </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleResetSettings}
+                            disabled={isSaving || !currentSettings?.system_prompt}
+                            className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="設定をリセット"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </button>
                         <button
                             onClick={handleSave}
                             disabled={isSaving || !currentSettings?.system_prompt}
