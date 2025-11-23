@@ -375,14 +375,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                     </div>
 
                     <div className="flex items-center gap-2 relative">
-                        {justGenerated && (
-                            <div className="absolute top-full right-0 mt-3 w-max z-10 animate-in fade-in slide-in-from-top-2 duration-500">
-                                <div className="bg-zinc-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg relative">
-                                    内容を確認して、保存を押してください
-                                    <div className="absolute -top-1 right-6 w-2 h-2 bg-zinc-900 rotate-45"></div>
-                                </div>
-                            </div>
-                        )}
+
                         <div className="relative group">
                             <div className="absolute top-full left-0 mt-2 w-max hidden group-hover:block z-20">
                                 <div className="bg-zinc-800 text-white text-xs p-2 rounded-lg shadow-lg relative opacity-90">
