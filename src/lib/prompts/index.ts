@@ -7,5 +7,5 @@
 
 export * from './setupConcierge'
 export * from './configBuilder'
-export * from './promptPreview'
+export * from './configParser'
 export * from './callSummary'

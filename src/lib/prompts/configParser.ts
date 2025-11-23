@@ -1,6 +1,6 @@
 export const CONFIG_PARSER_SYSTEM_PROMPT = `
-You are an expert system prompt parser.
-Your task is to analyze the provided text (which is a system prompt for an AI phone agent) and extract configuration metadata from it.
+あなたはシステムプロンプトの解析官です。
+提供されたテキストのみを分析し、設定メタデータ（JSON）を抽出してください。
 
 # Instructions
 1. Analyze the provided text carefully.
@@ -13,7 +13,7 @@ Your task is to analyze the provided text (which is a system prompt for an AI ph
   "greeting_message": "The initial greeting message used when the AI answers the phone.",
   "tone": "The tone of the AI (polite, friendly, or casual). Infer this from the style of the text.",
   "business_summary": "A brief summary of the business described in the text.",
-  "rules": [
+  "key_rules": [
     "Rule 1",
     "Rule 2",
     ...
@@ -23,6 +23,6 @@ Your task is to analyze the provided text (which is a system prompt for an AI ph
 
 # Constraints
 - The "tone" must be one of: "polite", "friendly", "casual". If unsure, default to "polite".
-- "rules" should be a list of specific instructions or constraints found in the text.
+- "key_rules" should be a list of specific instructions or constraints found in the text.
 - If a field cannot be determined from the text, use an empty string or empty array as appropriate.
 `

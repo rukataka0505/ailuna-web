@@ -70,7 +70,7 @@ ${JSON.stringify(existingSettings.config_metadata, null, 2) || '（未設定）'
 ## config_metadata 生成のガイドライン
    - **greeting_message**: system_prompt内で設定した「第一声」と同じ文章をここにコピーする。
    - **business_summary**: どのような業種・ビジネスか、会話から推測される内容を短く記載。
-- **key_rules**: 生成したsystem_promptの応対内容や振る舞いを、ユーザーが理解しやすいように箇条書きで簡潔にまとめる。
+   - **key_rules**: 生成されたシステムプロンプトの応対内容や振る舞いを、ユーザーが理解しやすいように3〜5項目の箇条書きで簡潔にまとめたもの。
 ## 出力フォーマット（JSON）
 \`\`\`json
 {

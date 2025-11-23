@@ -39,7 +39,7 @@ export async function POST(req: Request) {
             greeting_message: parsedData.greeting_message || '',
             tone: parsedData.tone || 'polite',
             business_description: parsedData.business_summary || '', // prompt uses business_summary, mapping to business_description
-            rules: parsedData.rules || [],
+            rules: parsedData.key_rules || [],
             business_type: parsedData.business_type || ''
         }
 

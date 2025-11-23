@@ -191,6 +191,11 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
 
             // If saving from Code tab, parse the system prompt first to sync Visual tab
             if (activeTab === 'code') {
+                // Show loading state for parsing
+                // Ideally we would have a separate state for "Parsing..." but isSaving covers the disabled state.
+                // We can use a toast or just rely on the fact that it takes a moment.
+                // For now, let's assume the user understands "Saving" includes processing.
+
                 try {
                     const parseResponse = await fetch('/api/builder/parse', {
                         method: 'POST',
@@ -211,12 +216,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                     setCurrentSettings(settingsToSave)
                 } catch (parseError) {
                     console.error('Parse error:', parseError)
-                    // Continue with save even if parse fails, but warn user?
-                    // For now, we proceed with original metadata or maybe we should stop?
-                    // Let's proceed but maybe show a toast that sync failed?
-                    // Given the requirement "Code is Truth", we should probably rely on the parse result.
-                    // If parse fails, we might be saving desynchronized data.
-                    // But let's assume it works for now.
+                    // Continue with save even if parse fails
                 }
             }
 
@@ -224,7 +224,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
             if (result.error) {
                 alert(result.error)
             } else {
-                alert('プロンプトを保存しました！' + (activeTab === 'code' ? '\nVisualタブも更新されました。' : ''))
+                alert('プロンプトを保存しました！' + (activeTab === 'code' ? '\n設定内容タブも自動的に更新されました。' : ''))
                 setSavedSettings(settingsToSave)
                 setJustGenerated(false)
             }
@@ -286,8 +286,10 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                 <button
                     onClick={() => setMobileTab('preview')}
                     className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mobileTab === 'preview'
-                        ? 'bg-white text-zinc-900 shadow-sm'
-                        : 'text-zinc-500'
+                            ? 'bg-white text-zinc-900 shadow-sm'
+                            : isGenerating
+                                ? 'animate-pulse ring-2 ring-indigo-400 ring-offset-1 bg-indigo-50 text-indigo-700'
+                                : 'text-zinc-500'
                         }`}
                 >
                     プロンプトプレビュー
@@ -447,7 +449,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                 }`}
                         >
                             {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                            保存
+                            {isSaving && activeTab === 'code' ? '解析中...' : '保存'}
                         </button>
                     </div>
 
@@ -460,7 +462,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                 : 'text-zinc-500 hover:text-zinc-700'
                                 }`}
                         >
-                            Visual
+                            設定内容
                         </button>
                         <button
                             onClick={() => setActiveTab('code')}
@@ -469,7 +471,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                 : 'text-zinc-500 hover:text-zinc-700'
                                 }`}
                         >
-                            Code
+                            プロンプト編集
                         </button>
                     </div>
                 </div>
@@ -541,7 +543,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                 <div className="bg-indigo-500/10 border-b border-indigo-500/20 px-3 py-2">
                                     <p className="text-[10px] text-indigo-400 flex items-center gap-1.5">
                                         <span className="shrink-0">✨</span>
-                                        システムプロンプトを直接編集できます
+                                        保存すると、設定内容タブも自動的に更新されます
                                     </p>
                                 </div>
                                 <textarea

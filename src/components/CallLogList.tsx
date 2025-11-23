@@ -97,6 +97,7 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
         }
     }
 
+    
     const handleLoadMore = async () => {
         setLoading(true)
         try {

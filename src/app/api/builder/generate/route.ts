@@ -50,7 +50,7 @@ export async function POST(req: Request) {
         const systemPrompt = buildConfigBuilderSystemPrompt(existingSettings)
 
         const completion = await openai.chat.completions.create({
-            model: process.env.AILUNA_MODEL_NANO || 'gpt-5-mini',
+            model: process.env.AILUNA_MODEL_MINI || 'gpt-5-mini',
             messages: [
                 { role: 'system', content: systemPrompt },
                 ...messages
