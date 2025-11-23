@@ -543,7 +543,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                 <div className="bg-indigo-500/10 border-b border-indigo-500/20 px-3 py-2">
                                     <p className="text-[10px] text-indigo-400 flex items-center gap-1.5">
                                         <span className="shrink-0">✨</span>
-                                        保存すると、設定内容タブも自動的に更新されます
+                                        システムプロンプトを直接編集できます
                                     </p>
                                 </div>
                                 <textarea
