@@ -63,7 +63,6 @@ ${JSON.stringify(existingSettings.config_metadata, null, 2) || '（未設定）'
 
 3. **構成要素**
    - [Role]: 役割定義
-   - [Greeting]: 第一声のセリフ
    - [Rules]: 明示されたルール + 禁止事項
    - [Fallback]: 判断に迷った時の「折り返し提案」フロー
 
