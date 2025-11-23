@@ -65,9 +65,15 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
      * 
      * 注意: 比較用の「旧設定」や「新設定」などの状態は持ちません。
      */
-    const [currentSettings, setCurrentSettings] = useState<AgentSettings>(BLANK_SETTINGS)
+    const [currentSettings, setCurrentSettings] = useState<AgentSettings>(initialSettings || BLANK_SETTINGS)
     const [activeTab, setActiveTab] = useState<'visual' | 'code'>('visual')
     const messagesEndRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        if (initialSettings) {
+            setCurrentSettings(initialSettings)
+        }
+    }, [initialSettings])
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
