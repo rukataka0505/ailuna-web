@@ -286,10 +286,10 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                 <button
                     onClick={() => setMobileTab('preview')}
                     className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mobileTab === 'preview'
-                            ? 'bg-white text-zinc-900 shadow-sm'
-                            : isGenerating
-                                ? 'animate-pulse ring-2 ring-indigo-400 ring-offset-1 bg-indigo-50 text-indigo-700'
-                                : 'text-zinc-500'
+                        ? 'bg-white text-zinc-900 shadow-sm'
+                        : isGenerating
+                            ? 'animate-pulse ring-2 ring-indigo-400 ring-offset-1 bg-indigo-50 text-indigo-700'
+                            : 'text-zinc-500'
                         }`}
                 >
                     プロンプトプレビュー
@@ -476,7 +476,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                     </div>
                 </div>
 
-                <div className="flex-1 p-6 overflow-y-auto">
+                <div className="p-6 overflow-y-auto max-h-[500px]">
                     {isGenerating ? (
                         <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 animate-in fade-in duration-300">
                             <div className="relative">
