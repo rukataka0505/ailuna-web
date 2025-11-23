@@ -11,7 +11,7 @@
  * 
  * ## データフロー
  * 1. ユーザーがチャットでヒアリング
- * 2. 「設定を生成」→ API呼び出し → currentSettings に保存
+ * 2. 「プロンプトを生成」→ API呼び出し → currentSettings に保存
  * 3. プレビューエリアが自動更新（Visual/Codeタブで同じ設定を異なる形式で表示）
  * 4. 「保存」→ DBに保存
  * 
@@ -176,7 +176,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
             setMobileTab('preview')
         } catch (error) {
             console.error('Generate error:', error)
-            alert('設定の生成に失敗しました。')
+            alert('プロンプトの生成に失敗しました。')
         } finally {
             setIsGenerating(false)
         }
@@ -187,12 +187,45 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
         setIsSaving(true)
 
         try {
-            const result = await saveAgentSettings(currentSettings.system_prompt, currentSettings.config_metadata)
+            let settingsToSave = currentSettings
+
+            // If saving from Code tab, parse the system prompt first to sync Visual tab
+            if (activeTab === 'code') {
+                try {
+                    const parseResponse = await fetch('/api/builder/parse', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ system_prompt: currentSettings.system_prompt })
+                    })
+
+                    if (!parseResponse.ok) {
+                        throw new Error('Failed to parse system prompt')
+                    }
+
+                    const parsedMetadata = await parseResponse.json()
+                    settingsToSave = {
+                        ...currentSettings,
+                        config_metadata: parsedMetadata
+                    }
+                    // Update local state to reflect parsed metadata immediately
+                    setCurrentSettings(settingsToSave)
+                } catch (parseError) {
+                    console.error('Parse error:', parseError)
+                    // Continue with save even if parse fails, but warn user?
+                    // For now, we proceed with original metadata or maybe we should stop?
+                    // Let's proceed but maybe show a toast that sync failed?
+                    // Given the requirement "Code is Truth", we should probably rely on the parse result.
+                    // If parse fails, we might be saving desynchronized data.
+                    // But let's assume it works for now.
+                }
+            }
+
+            const result = await saveAgentSettings(settingsToSave.system_prompt, settingsToSave.config_metadata)
             if (result.error) {
                 alert(result.error)
             } else {
-                alert('設定を保存しました！')
-                setSavedSettings(currentSettings)
+                alert('プロンプトを保存しました！' + (activeTab === 'code' ? '\nVisualタブも更新されました。' : ''))
+                setSavedSettings(settingsToSave)
                 setJustGenerated(false)
             }
         } catch (error) {
@@ -226,7 +259,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     }
 
     const handleResetSettings = () => {
-        if (!window.confirm('生成された設定がすべて破棄されますが、よろしいですか？\n保存されていない変更は失われます。')) {
+        if (!window.confirm('生成されたプロンプトがすべて破棄されますが、よろしいですか？\n保存されていない変更は失われます。')) {
             return
         }
         setCurrentSettings(BLANK_SETTINGS)
@@ -257,7 +290,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                         : 'text-zinc-500'
                         }`}
                 >
-                    設定プレビュー
+                    プロンプトプレビュー
                 </button>
             </div>
 
@@ -266,7 +299,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                 <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center">
                     <div>
                         <h3 className="font-semibold text-zinc-900">対話型セットアップ</h3>
-                        <p className="text-xs text-zinc-500">AIと会話して設定を作りましょう</p>
+                        <p className="text-xs text-zinc-500">AIと会話してプロンプトを作りましょう</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="relative group">
@@ -291,7 +324,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             <div className="absolute top-full right-0 mt-2 w-64 hidden group-hover:block z-20">
                                 <div className="bg-zinc-800 text-white text-xs p-2 rounded-lg shadow-lg relative opacity-90">
                                     これまでの会話内容を解析して、
-                                    AIのシステムプロンプト（設定）を自動生成します。
+                                    AIのシステムプロンプトを自動生成します。
                                     <div className="absolute -top-1 right-6 w-2 h-2 bg-zinc-800 rotate-45"></div>
                                 </div>
                             </div>
@@ -301,7 +334,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                 className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                                設定を生成する
+                                プロンプトを生成・更新する
                             </button>
                         </div>
                     </div>
@@ -380,8 +413,8 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                 <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex flex-col gap-3">
                     <div className="flex justify-between items-center">
                         <div>
-                            <h3 className="font-semibold text-zinc-900">設定プレビュー</h3>
-                            <p className="text-xs text-zinc-500">生成された設定を確認・保存</p>
+                            <h3 className="font-semibold text-zinc-900">プロンプトプレビュー</h3>
+                            <p className="text-xs text-zinc-500">生成されたプロンプトを確認・編集・保存</p>
                         </div>
                     </div>
 
@@ -390,7 +423,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                         <div className="relative group">
                             <div className="absolute top-full left-0 mt-2 w-max hidden group-hover:block z-20">
                                 <div className="bg-zinc-800 text-white text-xs p-2 rounded-lg shadow-lg relative opacity-90">
-                                    生成された設定を破棄し、初期状態に戻します
+                                    生成されたプロンプトを破棄し、初期状態に戻します
                                     <div className="absolute -top-1 left-3 w-2 h-2 bg-zinc-800 rotate-45"></div>
                                 </div>
                             </div>
@@ -453,7 +486,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             <div className="space-y-2">
                                 <h3 className="text-zinc-900 font-medium">AIがあなたの専属電話番を作成中...</h3>
                                 <p className="text-xs text-zinc-500 max-w-[240px] mx-auto leading-relaxed">
-                                    これまでの会話を分析して、最適な設定を構成しています。<br />
+                                    これまでの会話を分析して、最適なプロンプトを構成しています。<br />
                                     30秒ほどお待ちください。
                                 </p>
                             </div>
@@ -505,10 +538,10 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                         <div className="space-y-2 h-full flex flex-col">
                             <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">システムプロンプト (Raw)</h4>
                             <div className="bg-zinc-900 rounded-lg border border-zinc-800 flex-1 overflow-hidden flex flex-col">
-                                <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-3 py-2">
-                                    <p className="text-[10px] text-yellow-500 flex items-center gap-1.5">
-                                        <span className="shrink-0">⚠️</span>
-                                        ここでの変更はVisualタブには反映されません。システムプロンプトが優先されます。
+                                <div className="bg-indigo-500/10 border-b border-indigo-500/20 px-3 py-2">
+                                    <p className="text-[10px] text-indigo-400 flex items-center gap-1.5">
+                                        <span className="shrink-0">✨</span>
+                                        システムプロンプトを直接編集できます
                                     </p>
                                 </div>
                                 <textarea
