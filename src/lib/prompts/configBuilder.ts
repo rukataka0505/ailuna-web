@@ -1,84 +1,77 @@
 /**
- * Config Builder System Prompt
- * 
- * This prompt builder is used to generate AI agent configurations based on
- * conversation history. When existing settings are present, they serve as
- * reference information that can be freely rewritten and restructured.
- */
-
-interface ExistingSettings {
-    system_prompt: string | null
-    config_metadata: any
-}
-
-/**
- * Builds the system prompt for config generation based on whether
- * existing settings are present (used as reference) or not (new creation).
- * 
- * @param existingSettings - Optional existing settings to use as reference information
- * @returns The complete system prompt string
+ * Builds the system prompt for config generation.
  */
 export function buildConfigBuilderSystemPrompt(
     existingSettings?: ExistingSettings | null
 ): string {
+    // 基本定義
     let systemPrompt = `
 あなたは電話番設定の生成AIです。
-これまでのユーザーとの会話履歴をもとに、AI電話番のための「システムプロンプト」と「設定メタデータ」を生成してください。
+会話履歴と既存設定をもとに、AI電話番（AiLuna）の以下の2つを出力してください。
+
+1. **system_prompt**: AIエージェントの振る舞いを規定する命令文
+2. **config_metadata**: 管理画面表示用の設定データ
+
+出力は必ず **JSON形式** で行い、余計な解説は含めないでください。
 `
 
+    // 既存設定の注入
     if (existingSettings?.system_prompt || existingSettings?.config_metadata) {
         systemPrompt += `
-## 重要: 既存設定を参考にした生成
+## 既存設定（参考情報）
+以下の情報は参考として使い、会話内容に合わせて自由に書き換えてください。
+特に会話で「変更」の指示があった場合は、会話内容を絶対優先してください。
 
-**既存の設定が存在します。これを参考情報として活用しつつ、必要に応じて自由に書き直してください。**
-
-### 既存のシステムプロンプト:
+### Current System Prompt:
 \`\`\`
 ${existingSettings.system_prompt || '（未設定）'}
 \`\`\`
 
-### 既存の設定メタデータ:
+### Current Metadata:
 \`\`\`json
 ${JSON.stringify(existingSettings.config_metadata, null, 2) || '（未設定）'}
 \`\`\`
-
-**指示:**
-- 既存設定に書かれている「事実や方針」を情報源として使用してください
-- ただし、既存設定の文言や構造をそのまま維持する必要はありません
-- 会話内容と既存設定を総合的に判断し、最適な形に再構成してください
-- 古い情報や不要な記述は削除し、新しい会話内容を優先してください
-- 会話で触れられていない既存設定の内容は、必要に応じて保持または削除を判断してください
 `
     } else {
         systemPrompt += `
-## 新規設定の生成
-
-既存の設定が存在しないため、ゼロから新しい設定を作成してください。
+## 新規作成
+既存設定がないため、ゼロから最適な設定を構築してください。
 `
     }
 
+    // 生成ルールの詳細
     systemPrompt += `
-## 生成ルール【厳守】
+## system_prompt 生成のガイドライン【重要】
 
-### 情報源の制限
-会話履歴と既存設定に明示的に記載された情報のみを使用し、それ以外の項目については推測や一般的な想定で具体的な内容を記載しないこと。既存設定がある場合は、記載されている事実や方針を参考にしつつ、文言や構造は自由に再構成してください。
+1. **基本スタンス（安全なデフォルト）**
+   - ユーザーが指示した内容は具体的に記述する。
+   - **指示がない項目については、「丁寧にお断りし、用件を聞いて担当者から折り返すと伝える」という安全なフォールバック動作を必ず組み込むこと。**
+   - 勝手に割引をしたり、約束をしてはいけないという「ガードレール」を含めること。
 
-### system_prompt の必須要件
-- **通話開始時の挨拶**: 生成するsystem_promptの冒頭に、以下の形式で最初の発話を必ず指定すること
-  - 「通話が接続されたとき、あなたの「最初の発話」は必ず次の一文だけにしてください。」
-  - 「一文目：」に続けて、会話で指定された挨拶文を記載
-- **トーン・口調**: 会話で指定された場合のみ反映
-- **対応ルール**: 会話で明示された内容のみを記載
-- **不明事項への対応**: 具体的な指示は避け、抽象的な安全方針のみ記載
+2. **第一声（挨拶）の規定**
+   - プロンプトの冒頭に「電話が繋がった直後の第一声」を明記する。
+   - ユーザー指定の挨拶がない場合は、ビジネスにふさわしい一般的な挨拶（例：「お電話ありがとうございます。株式会社〇〇です。ご用件をお伺いします」）を提案して設定する。
 
-### config_metadata の生成方針
-- 会話から抽出できた情報のみを簡潔に要約
-- business_type、key_rules などは会話で触れられた内容のみを反映
+3. **構成要素**
+   - [Role]: 役割定義
+   - [Greeting]: 第一声のセリフ
+   - [Rules]: 明示されたルール + 禁止事項
+   - [Fallback]: 判断に迷った時の「折り返し提案」フロー
 
-### 品質基準
--  短く実用的であること
--  会話で触れた内容のみが反映されていること
--  推測で埋められた項目がないこと
+## config_metadata 生成のガイドライン
+   - **greeting_message**: system_prompt内で設定した「第一声」と同じ文章をここにコピーする。
+   - **business_summary**: どのような業種・ビジネスか、会話から推測される内容を短く記載。
+
+## 出力フォーマット（JSON）
+\`\`\`json
+{
+  "system_prompt": "ここに生成されたプロンプト全文...",
+  "config_metadata": {
+    "greeting_message": "お電話ありがとうございます...",
+    "business_summary": "..."
+  }
+}
+\`\`\`
 `
 
     return systemPrompt
