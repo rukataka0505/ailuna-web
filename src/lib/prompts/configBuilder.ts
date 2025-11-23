@@ -1,6 +1,12 @@
 /**
  * Builds the system prompt for config generation.
  */
+
+interface ExistingSettings {
+    system_prompt: string | null
+    config_metadata: any
+}
+
 export function buildConfigBuilderSystemPrompt(
     existingSettings?: ExistingSettings | null
 ): string {
@@ -49,8 +55,10 @@ ${JSON.stringify(existingSettings.config_metadata, null, 2) || '（未設定）'
    - 勝手に割引をしたり、約束をしてはいけないという「ガードレール」を含めること。
 
 2. **第一声（挨拶）の規定**
-   - プロンプトの冒頭に「電話が繋がった直後の第一声」を明記する。
-   - ユーザー指定の挨拶がない場合は、ビジネスにふさわしい一般的な挨拶（例：「お電話ありがとうございます。株式会社〇〇です。ご用件をお伺いします」）を提案して設定する。
+   - 生成するsystem_promptの冒頭に、以下の形式で最初の発話を必ず指定すること。
+     - 「通話が接続されたとき、あなたの「最初の発話」は必ず次の一文だけにしてください。」
+     - 「一文目：」に続けて、会話で指定された挨拶文を記載する。
+   - ユーザー指定がない場合は、ビジネスにふさわしい一般的な挨拶を提案して上記形式で設定する。
 
 3. **構成要素**
    - [Role]: 役割定義
