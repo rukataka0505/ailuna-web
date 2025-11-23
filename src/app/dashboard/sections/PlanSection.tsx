@@ -1,6 +1,43 @@
 'use client'
 
+import { useState } from 'react'
+
 export function PlanSection() {
+    const [isLoading, setIsLoading] = useState(false)
+
+    const handleUpgrade = async () => {
+        try {
+            setIsLoading(true)
+
+            // Checkout セッション作成 API を呼び出し
+            const response = await fetch('/api/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.error || 'Failed to create checkout session')
+            }
+
+            const { url } = await response.json()
+
+            if (!url) {
+                throw new Error('No checkout URL returned')
+            }
+
+            // Stripe Checkout ページにリダイレクト
+            window.location.href = url
+
+        } catch (error) {
+            console.error('Checkout error:', error)
+            alert(error instanceof Error ? error.message : 'アップグレード処理中にエラーが発生しました。もう一度お試しください。')
+            setIsLoading(false)
+        }
+    }
+
     return (
         <div className="space-y-6">
             <div>
@@ -24,8 +61,12 @@ export function PlanSection() {
                     <p className="text-zinc-500 mb-6">
                         月額2,980円で通話時間無制限、高度なAI設定などが利用可能になります。
                     </p>
-                    <button disabled className="w-full py-3 px-4 bg-zinc-50 text-zinc-400 rounded-xl font-medium cursor-not-allowed border border-zinc-200 hover:bg-zinc-100 transition-colors">
-                        アップグレード（準備中）
+                    <button
+                        onClick={handleUpgrade}
+                        disabled={isLoading}
+                        className="w-full py-3 px-4 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors disabled:bg-zinc-300 disabled:cursor-not-allowed disabled:text-zinc-500"
+                    >
+                        {isLoading ? '処理中...' : 'アップグレード'}
                     </button>
                 </div>
             </div>
