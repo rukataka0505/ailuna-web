@@ -177,6 +177,31 @@ export async function fetchCallMetrics(): Promise<CallMetrics> {
     }
 }
 
+export async function deleteAgentSettings() {
+    const supabase = await createClient()
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+        redirect('/login')
+    }
+
+    const { error } = await supabase
+        .from('user_prompts')
+        .delete()
+        .eq('user_id', user.id)
+
+    if (error) {
+        console.error('Error deleting agent settings:', error)
+        return { error: '設定の削除に失敗しました。' }
+    }
+
+    revalidatePath('/dashboard')
+    return { success: '設定を削除しました。' }
+}
+
 export async function fetchUserProfile() {
     const supabase = await createClient()
     const {

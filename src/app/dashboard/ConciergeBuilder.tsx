@@ -23,7 +23,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { AgentSettings, ConfigMetadata } from '@/types/agent'
 import { Send, Sparkles, Save, Loader2, Bot, User, RotateCcw, Trash2 } from 'lucide-react'
-import { saveAgentSettings } from './actions'
+import { saveAgentSettings, deleteAgentSettings } from './actions'
 
 interface ConciergeBuilderProps {
     initialSettings: AgentSettings
@@ -54,6 +54,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     const [isChatLoading, setIsChatLoading] = useState(false)
     const [isGenerating, setIsGenerating] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
+    const [isResettingSettings, setIsResettingSettings] = useState(false)
     const [isLoadingHistory, setIsLoadingHistory] = useState(true)
     const [justGenerated, setJustGenerated] = useState(false)
     const [mobileTab, setMobileTab] = useState<'chat' | 'preview'>('chat')
@@ -265,13 +266,32 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
         }
     }
 
-    const handleResetSettings = () => {
-        if (!window.confirm('生成されたプロンプトがすべて破棄されますが、よろしいですか？\n保存されていない変更は失われます。')) {
+    const handleResetSettings = async () => {
+        if (!window.confirm('生成されたプロンプトがすべて破棄されますが、よろしいですか？\nデータベースからも完全に削除されます。\nこの操作は取り消せません。')) {
             return
         }
-        setCurrentSettings(BLANK_SETTINGS)
-        setActiveTab('visual')
-        setJustGenerated(false)
+
+        setIsResettingSettings(true)
+
+        try {
+            // Delete from database
+            const result = await deleteAgentSettings()
+            if (result.error) {
+                alert(result.error)
+                return
+            }
+
+            // Reset local state
+            setCurrentSettings(BLANK_SETTINGS)
+            setSavedSettings(BLANK_SETTINGS)
+            setActiveTab('visual')
+            setJustGenerated(false)
+        } catch (error) {
+            console.error('Reset error:', error)
+            alert('設定のリセット中にエラーが発生しました。')
+        } finally {
+            setIsResettingSettings(false)
+        }
     }
 
     // 変更があるかどうかを判定 (JSON文字列比較)
@@ -437,11 +457,11 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             </div>
                             <button
                                 onClick={handleResetSettings}
-                                disabled={isSaving || !currentSettings?.system_prompt}
+                                disabled={isSaving || isResettingSettings || !currentSettings?.system_prompt}
                                 className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                 title=""
                             >
-                                <Trash2 className="h-4 w-4" />
+                                {isResettingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                             </button>
                         </div>
                         <button
