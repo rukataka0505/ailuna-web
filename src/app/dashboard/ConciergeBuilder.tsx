@@ -497,10 +497,19 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                     ) : (
                         <div className="space-y-2 h-full flex flex-col">
                             <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">システムプロンプト (Raw)</h4>
-                            <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800 flex-1 overflow-hidden">
-                                <pre className="text-xs text-zinc-300 whitespace-pre-wrap font-mono h-full overflow-y-auto">
-                                    {currentSettings?.system_prompt}
-                                </pre>
+                            <div className="bg-zinc-900 rounded-lg border border-zinc-800 flex-1 overflow-hidden flex flex-col">
+                                <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-3 py-2">
+                                    <p className="text-[10px] text-yellow-500 flex items-center gap-1.5">
+                                        <span className="shrink-0">⚠️</span>
+                                        ここでの変更はVisualタブには反映されません。システムプロンプトが優先されます。
+                                    </p>
+                                </div>
+                                <textarea
+                                    className="flex-1 w-full bg-transparent text-xs text-zinc-300 font-mono p-4 focus:outline-none resize-none"
+                                    value={currentSettings?.system_prompt || ''}
+                                    onChange={(e) => setCurrentSettings(prev => ({ ...prev, system_prompt: e.target.value }))}
+                                    spellCheck={false}
+                                />
                             </div>
                         </div>
                     )}
