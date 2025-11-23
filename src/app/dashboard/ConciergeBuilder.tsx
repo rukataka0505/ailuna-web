@@ -537,7 +537,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             </div>
                         </div>
                     ) : (
-                        <div className="space-y-2 h-full flex flex-col">
+                        <div className="space-y-2 h-full flex flex-col min-h-[400px]">
                             <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">システムプロンプト (Raw)</h4>
                             <div className="bg-zinc-900 rounded-lg border border-zinc-800 flex-1 overflow-hidden flex flex-col">
                                 <div className="bg-indigo-500/10 border-b border-indigo-500/20 px-3 py-2">
