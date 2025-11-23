@@ -2,6 +2,7 @@ import { OpenAI } from 'openai'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { zodResponseFormat } from 'openai/helpers/zod'
+import { createClient } from '@/utils/supabase/server'
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -28,10 +29,58 @@ export async function POST(req: Request) {
             )
         }
 
-        const systemPrompt = `
+        // 既存の設定を取得（差分更新のため）
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        let existingSettings: { system_prompt: string | null; config_metadata: any } | null = null
+
+        if (user) {
+            const { data } = await supabase
+                .from('user_prompts')
+                .select('system_prompt, config_metadata')
+                .eq('user_id', user.id)
+                .single()
+
+            existingSettings = data
+        }
+
+        // 既存設定がある場合は、差分更新として指示
+        let systemPrompt = `
 あなたは電話番設定の生成AIです。
 これまでのユーザーとの会話履歴をもとに、AI電話番のための「システムプロンプト」と「設定メタデータ」を生成してください。
+`
 
+        if (existingSettings?.system_prompt || existingSettings?.config_metadata) {
+            systemPrompt += `
+## 重要: 既存設定の差分更新
+
+**既存の設定が存在します。ユーザーの追加要望を既存設定に反映した「差分更新」として新しい設定を生成してください。**
+
+### 既存のシステムプロンプト:
+\`\`\`
+${existingSettings.system_prompt || '（未設定）'}
+\`\`\`
+
+### 既存の設定メタデータ:
+\`\`\`json
+${JSON.stringify(existingSettings.config_metadata, null, 2) || '（未設定）'}
+\`\`\`
+
+**指示:**
+- 既存の設定内容を基盤として、ユーザーの新しい要望や変更点のみを反映してください
+- 変更されていない部分は既存の内容を維持してください
+- ユーザーが明示的に変更を求めた部分のみを更新してください
+`
+        } else {
+            systemPrompt += `
+## 新規設定の生成
+
+既存の設定が存在しないため、ゼロから新しい設定を作成してください。
+`
+        }
+
+        systemPrompt += `
 ## 生成のポイント
 1. **system_prompt**:
    - 「あなたは[業種]の[店名/会社名]のAI電話番です。」から始めてください。
