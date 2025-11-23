@@ -68,7 +68,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     const [currentSettings, setCurrentSettings] = useState<AgentSettings>(initialSettings || BLANK_SETTINGS)
     const [savedSettings, setSavedSettings] = useState<AgentSettings>(initialSettings || BLANK_SETTINGS)
     const [activeTab, setActiveTab] = useState<'visual' | 'code'>('visual')
-    const messagesEndRef = useRef<HTMLDivElement>(null)
+    const chatContainerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         if (initialSettings) {
@@ -78,7 +78,14 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     }, [initialSettings])
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        if (chatContainerRef.current) {
+            const { scrollHeight, clientHeight } = chatContainerRef.current
+            // ページ全体のスクロールを誘発せず、コンテナ内だけで完結させる
+            chatContainerRef.current.scrollTo({
+                top: scrollHeight - clientHeight,
+                behavior: 'smooth'
+            })
+        }
     }
 
     useEffect(() => {
@@ -342,7 +349,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                     </div>
                 </div>
 
-                <div className="flex-1 p-4 overflow-y-auto bg-zinc-50/30 space-y-4">
+                <div ref={chatContainerRef} className="flex-1 p-4 overflow-y-auto bg-zinc-50/30 space-y-4">
                     {isLoadingHistory ? (
                         <div className="flex justify-center items-center h-full">
                             <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
@@ -375,7 +382,6 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             )}
                         </>
                     )}
-                    <div ref={messagesEndRef} />
                 </div>
 
                 <div className="p-4 bg-white border-t border-zinc-100">
