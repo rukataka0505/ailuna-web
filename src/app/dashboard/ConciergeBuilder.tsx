@@ -184,7 +184,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                         </div>
                         <button
                             onClick={handleSave}
-                            disabled={isSaving || !currentSettings.system_prompt}
+                            disabled={isSaving || !currentSettings?.system_prompt}
                             className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
@@ -223,14 +223,14 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                 <div className="bg-zinc-50 rounded-lg p-3 border border-zinc-100 space-y-2">
                                     <div className="grid grid-cols-3 gap-2 text-xs">
                                         <span className="text-zinc-500">業種</span>
-                                        <span className="col-span-2 font-medium text-zinc-900">{currentSettings.config_metadata.industry || '未設定'}</span>
+                                        <span className="col-span-2 font-medium text-zinc-900">{currentSettings?.config_metadata?.business_type || '未設定'}</span>
                                     </div>
                                     <div className="grid grid-cols-3 gap-2 text-xs">
                                         <span className="text-zinc-500">口調</span>
                                         <span className="col-span-2 font-medium text-zinc-900">
-                                            {currentSettings.config_metadata.tone === 'polite' ? '丁寧' :
-                                                currentSettings.config_metadata.tone === 'friendly' ? 'フレンドリー' :
-                                                    currentSettings.config_metadata.tone === 'casual' ? 'カジュアル' : '未設定'}
+                                            {currentSettings?.config_metadata?.tone === 'polite' ? '丁寧' :
+                                                currentSettings?.config_metadata?.tone === 'friendly' ? 'フレンドリー' :
+                                                    currentSettings?.config_metadata?.tone === 'casual' ? 'カジュアル' : '未設定'}
                                         </span>
                                     </div>
                                 </div>
@@ -239,14 +239,14 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             <div className="space-y-2">
                                 <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">挨拶メッセージ</h4>
                                 <div className="bg-zinc-50 rounded-lg p-3 border border-zinc-100 text-sm text-zinc-700">
-                                    {currentSettings.config_metadata.greeting_message || '未設定'}
+                                    {currentSettings?.config_metadata?.greeting_message || '未設定'}
                                 </div>
                             </div>
 
                             <div className="space-y-2">
                                 <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">重要ルール</h4>
                                 <ul className="bg-zinc-50 rounded-lg p-3 border border-zinc-100 space-y-1">
-                                    {currentSettings.config_metadata.rules && currentSettings.config_metadata.rules.length > 0 ? (
+                                    {currentSettings?.config_metadata?.rules && currentSettings.config_metadata.rules.length > 0 ? (
                                         currentSettings.config_metadata.rules.map((rule, i) => (
                                             <li key={i} className="text-xs text-zinc-600 flex gap-2">
                                                 <span className="text-indigo-500">•</span>
@@ -264,7 +264,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">システムプロンプト (Raw)</h4>
                             <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800 flex-1 overflow-hidden">
                                 <pre className="text-xs text-zinc-300 whitespace-pre-wrap font-mono h-full overflow-y-auto">
-                                    {currentSettings.system_prompt || '未設定'}
+                                    {currentSettings?.system_prompt || '未設定'}
                                 </pre>
                             </div>
                         </div>

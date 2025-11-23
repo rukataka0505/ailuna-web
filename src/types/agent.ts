@@ -3,7 +3,7 @@ export interface ConfigMetadata {
     greeting_message: string
     business_description: string
     rules: string[]
-    industry?: string
+    business_type?: string
 }
 
 export interface AgentSettings {

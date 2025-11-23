@@ -66,7 +66,7 @@ export async function POST(req: Request) {
                 greeting_message: result.config_metadata.sample_greeting,
                 business_description: '（自動生成された設定）', // 簡易的な値
                 rules: result.config_metadata.key_rules,
-                industry: result.config_metadata.business_type
+                business_type: result.config_metadata.business_type
             }
         }
 
