@@ -47,7 +47,6 @@ export async function POST(req: Request) {
                 { role: 'system', content: systemPrompt },
                 ...messages
             ],
-            temperature: 0.7,
         })
 
         return NextResponse.json({

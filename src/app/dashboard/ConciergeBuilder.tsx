@@ -218,7 +218,23 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                 </div>
 
                 <div className="flex-1 p-6 overflow-y-auto">
-                    {activeTab === 'visual' ? (
+                    {isGenerating ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 animate-in fade-in duration-300">
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-75"></div>
+                                <div className="relative bg-white p-4 rounded-full border-2 border-indigo-100 shadow-sm">
+                                    <Sparkles className="h-8 w-8 text-indigo-600 animate-pulse" />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-zinc-900 font-medium">AIがあなたの専属電話番を作成中...</h3>
+                                <p className="text-xs text-zinc-500 max-w-[240px] mx-auto leading-relaxed">
+                                    これまでの会話を分析して、最適な設定を構成しています。<br />
+                                    30秒ほどお待ちください。
+                                </p>
+                            </div>
+                        </div>
+                    ) : activeTab === 'visual' ? (
                         <div className="space-y-6">
                             <div className="space-y-2">
                                 <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">基本情報</h4>
