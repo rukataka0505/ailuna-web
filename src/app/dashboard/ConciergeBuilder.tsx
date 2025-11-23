@@ -476,7 +476,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                     </div>
                 </div>
 
-                <div className="p-6 overflow-y-auto max-h-[500px]">
+                <div className="p-6 overflow-y-auto max-h-[500px] lg:max-h-none lg:flex-1">
                     {isGenerating ? (
                         <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 animate-in fade-in duration-300">
                             <div className="relative">
