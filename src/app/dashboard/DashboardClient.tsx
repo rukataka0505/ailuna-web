@@ -60,7 +60,12 @@ export function DashboardClient({
     const renderContent = () => {
         switch (activeTab) {
             case 'dashboard':
-                return <DashboardSection metrics={metrics} />
+                return <DashboardSection
+                    metrics={metrics}
+                    onNavigate={setActiveTab}
+                    agentSettings={prompts}
+                    recentLogs={initialLogs}
+                />
             case 'account':
                 return <AccountSection />
             case 'plan':
