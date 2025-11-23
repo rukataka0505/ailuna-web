@@ -224,31 +224,50 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     }
 
     return (
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-200px)] gap-6">
+        <div className="flex flex-col lg:flex-row lg:h-[calc(100vh-200px)] gap-6">
             {/* Left Side: Chat UI Area */}
-            <div className="flex-1 bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col">
+            <div className="flex-1 bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col h-[600px] lg:h-auto">
                 <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center">
                     <div>
                         <h3 className="font-semibold text-zinc-900">対話型セットアップ</h3>
                         <p className="text-xs text-zinc-500">AIと会話して設定を作りましょう</p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={handleResetConversation}
-                            disabled={isGenerating || isChatLoading || messages.length <= 1}
-                            className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="会話をリセット"
-                        >
-                            <RotateCcw className="h-4 w-4" />
-                        </button>
-                        <button
-                            onClick={handleGenerateSettings}
-                            disabled={isGenerating || messages.length < 3}
-                            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                            設定を生成する
-                        </button>
+                        <div className="relative group">
+                            <div className="absolute top-full right-0 mt-2 w-max hidden group-hover:block z-20">
+                                <div className="bg-zinc-800 text-white text-xs p-2 rounded-lg shadow-lg relative opacity-90">
+                                    会話をリセットします
+                                    （既に生成された設定は残ります）
+                                    <div className="absolute -top-1 right-3 w-2 h-2 bg-zinc-800 rotate-45"></div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleResetConversation}
+                                disabled={isGenerating || isChatLoading || messages.length <= 1}
+                                className="flex items-center gap-2 px-3 py-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
+                                title=""
+                            >
+                                <RotateCcw className="h-4 w-4" />
+                                会話をリセット
+                            </button>
+                        </div>
+                        <div className="relative group">
+                            <div className="absolute top-full right-0 mt-2 w-64 hidden group-hover:block z-20">
+                                <div className="bg-zinc-800 text-white text-xs p-2 rounded-lg shadow-lg relative opacity-90">
+                                    これまでの会話内容を解析して、
+                                    AIのシステムプロンプト（設定）を自動生成します。
+                                    <div className="absolute -top-1 right-6 w-2 h-2 bg-zinc-800 rotate-45"></div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleGenerateSettings}
+                                disabled={isGenerating || messages.length < 3}
+                                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                                設定を生成する
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -332,21 +351,29 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
 
                     <div className="flex items-center gap-2 relative">
                         {justGenerated && (
-                            <div className="absolute bottom-full right-0 mb-3 w-max z-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <div className="absolute top-full right-0 mt-3 w-max z-10 animate-in fade-in slide-in-from-top-2 duration-500">
                                 <div className="bg-zinc-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg relative">
                                     内容を確認して、保存を押してください
-                                    <div className="absolute -bottom-1 right-6 w-2 h-2 bg-zinc-900 rotate-45"></div>
+                                    <div className="absolute -top-1 right-6 w-2 h-2 bg-zinc-900 rotate-45"></div>
                                 </div>
                             </div>
                         )}
-                        <button
-                            onClick={handleResetSettings}
-                            disabled={isSaving || !currentSettings?.system_prompt}
-                            className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="設定をリセット"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="relative group">
+                            <div className="absolute top-full left-0 mt-2 w-max hidden group-hover:block z-20">
+                                <div className="bg-zinc-800 text-white text-xs p-2 rounded-lg shadow-lg relative opacity-90">
+                                    生成された設定を破棄し、初期状態に戻します
+                                    <div className="absolute -top-1 left-3 w-2 h-2 bg-zinc-800 rotate-45"></div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleResetSettings}
+                                disabled={isSaving || !currentSettings?.system_prompt}
+                                className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                title=""
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                        </div>
                         <button
                             onClick={handleSave}
                             disabled={isSaving || !currentSettings?.system_prompt}
