@@ -55,6 +55,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     const [isGenerating, setIsGenerating] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [isLoadingHistory, setIsLoadingHistory] = useState(true)
+    const [justGenerated, setJustGenerated] = useState(false)
 
     /**
      * 現在の設定（単一）
@@ -160,8 +161,10 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
             if (data.error) throw new Error(data.error)
 
             setCurrentSettings(data)
+            setCurrentSettings(data)
             // 自動的にVisualタブに切り替え
             setActiveTab('visual')
+            setJustGenerated(true)
         } catch (error) {
             console.error('Generate error:', error)
             alert('設定の生成に失敗しました。')
@@ -180,6 +183,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                 alert(result.error)
             } else {
                 alert('設定を保存しました！')
+                setJustGenerated(false)
             }
         } catch (error) {
             console.error('Save error:', error)
@@ -216,6 +220,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
         }
         setCurrentSettings(BLANK_SETTINGS)
         setActiveTab('visual')
+        setJustGenerated(false)
     }
 
     return (
@@ -325,7 +330,15 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 relative">
+                        {justGenerated && (
+                            <div className="absolute bottom-full right-0 mb-3 w-max z-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                <div className="bg-zinc-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg relative">
+                                    内容を確認して、保存を押してください
+                                    <div className="absolute -bottom-1 right-6 w-2 h-2 bg-zinc-900 rotate-45"></div>
+                                </div>
+                            </div>
+                        )}
                         <button
                             onClick={handleResetSettings}
                             disabled={isSaving || !currentSettings?.system_prompt}
@@ -337,7 +350,10 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                         <button
                             onClick={handleSave}
                             disabled={isSaving || !currentSettings?.system_prompt}
-                            className="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${justGenerated
+                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_0_15px_rgba(79,70,229,0.5)] animate-pulse ring-2 ring-indigo-300 ring-offset-2'
+                                : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+                                }`}
                         >
                             {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                             保存
