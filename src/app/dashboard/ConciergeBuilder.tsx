@@ -66,12 +66,14 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
      * 注意: 比較用の「旧設定」や「新設定」などの状態は持ちません。
      */
     const [currentSettings, setCurrentSettings] = useState<AgentSettings>(initialSettings || BLANK_SETTINGS)
+    const [savedSettings, setSavedSettings] = useState<AgentSettings>(initialSettings || BLANK_SETTINGS)
     const [activeTab, setActiveTab] = useState<'visual' | 'code'>('visual')
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         if (initialSettings) {
             setCurrentSettings(initialSettings)
+            setSavedSettings(initialSettings)
         }
     }, [initialSettings])
 
@@ -168,7 +170,6 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
             if (data.error) throw new Error(data.error)
 
             setCurrentSettings(data)
-            setCurrentSettings(data)
             // 自動的にVisualタブに切り替え
             setActiveTab('visual')
             setJustGenerated(true)
@@ -191,6 +192,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                 alert(result.error)
             } else {
                 alert('設定を保存しました！')
+                setSavedSettings(currentSettings)
                 setJustGenerated(false)
             }
         } catch (error) {
@@ -231,6 +233,9 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
         setActiveTab('visual')
         setJustGenerated(false)
     }
+
+    // 変更があるかどうかを判定 (JSON文字列比較)
+    const hasChanges = JSON.stringify(currentSettings) !== JSON.stringify(savedSettings)
 
     return (
         <div className="flex flex-col lg:flex-row h-[calc(100vh-140px)] lg:h-[calc(100vh-200px)] gap-4 lg:gap-6">
@@ -279,7 +284,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                 title=""
                             >
                                 <RotateCcw className="h-4 w-4" />
-                                会話をリセット
+                                <span className="hidden sm:inline">会話をリセット</span>
                             </button>
                         </div>
                         <div className="relative group">
@@ -400,10 +405,12 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                         </div>
                         <button
                             onClick={handleSave}
-                            disabled={isSaving || !currentSettings?.system_prompt}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${justGenerated
-                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_0_15px_rgba(79,70,229,0.5)] animate-pulse ring-2 ring-indigo-300 ring-offset-2'
-                                : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+                            disabled={isSaving || !hasChanges || !currentSettings?.system_prompt}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${!hasChanges
+                                ? 'bg-white text-zinc-400 border border-zinc-200 shadow-sm'
+                                : justGenerated
+                                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_0_15px_rgba(79,70,229,0.5)] animate-pulse ring-2 ring-indigo-300 ring-offset-2'
+                                    : 'bg-zinc-900 hover:bg-zinc-800 text-white'
                                 }`}
                         >
                             {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
