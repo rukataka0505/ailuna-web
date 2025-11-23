@@ -38,7 +38,7 @@ type Message = {
 const BLANK_SETTINGS: AgentSettings = {
     system_prompt: '',
     config_metadata: {
-        tone: 'polite',
+        tone: undefined,
         greeting_message: '',
         business_description: '',
         rules: [],
@@ -48,7 +48,7 @@ const BLANK_SETTINGS: AgentSettings = {
 
 export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'assistant', content: 'こんにちは！AiLunaのセットアップコンシェルジュです。あなたの会社の電話番AIを作成するために、いくつか質問をさせてください。まず、電話に出た際の「最初の挨拶」を決めましょう。どのような挨拶にしますか？', timestamp: new Date().toISOString() }
+        { role: 'assistant', content: 'こんにちは！私はAiLunaのセットアップコンシェルジュです。私と一緒に、あなたの会社の電話番AIを作成しましょう。まず、電話に出た際の「最初の挨拶」を決めましょう。どのような挨拶にしますか？', timestamp: new Date().toISOString() }
     ])
     const [input, setInput] = useState('')
     const [isChatLoading, setIsChatLoading] = useState(false)
@@ -63,7 +63,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
      * 
      * 注意: 比較用の「旧設定」や「新設定」などの状態は持ちません。
      */
-    const [currentSettings, setCurrentSettings] = useState<AgentSettings>(initialSettings)
+    const [currentSettings, setCurrentSettings] = useState<AgentSettings>(BLANK_SETTINGS)
     const [activeTab, setActiveTab] = useState<'visual' | 'code'>('visual')
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -196,7 +196,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
 
         const initialMessage: Message = {
             role: 'assistant',
-            content: 'こんにちは！AiLunaのセットアップコンシェルジュです。あなたの会社の電話番AIを作成するために、いくつか質問をさせてください。まず、電話に出た際の「最初の挨拶」を決めましょう。どのような挨拶にしますか？',
+            content: 'こんにちは！AiLunaのセットアップコンシェルジュです。私と一緒に、あなたの会社の電話番AIを作成しましょう。まず、電話に出た際の「最初の挨拶」を決めましょう。どのような挨拶にしますか？',
             timestamp: new Date().toISOString()
         }
 
@@ -391,14 +391,14 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                 <div className="bg-zinc-50 rounded-lg p-3 border border-zinc-100 space-y-2">
                                     <div className="grid grid-cols-3 gap-2 text-xs">
                                         <span className="text-zinc-500">業種</span>
-                                        <span className="col-span-2 font-medium text-zinc-900">{currentSettings?.config_metadata?.business_type || '未設定'}</span>
+                                        <span className="col-span-2 font-medium text-zinc-900">{currentSettings?.config_metadata?.business_type}</span>
                                     </div>
                                     <div className="grid grid-cols-3 gap-2 text-xs">
                                         <span className="text-zinc-500">口調</span>
                                         <span className="col-span-2 font-medium text-zinc-900">
                                             {currentSettings?.config_metadata?.tone === 'polite' ? '丁寧' :
                                                 currentSettings?.config_metadata?.tone === 'friendly' ? 'フレンドリー' :
-                                                    currentSettings?.config_metadata?.tone === 'casual' ? 'カジュアル' : '未設定'}
+                                                    currentSettings?.config_metadata?.tone === 'casual' ? 'カジュアル' : ''}
                                         </span>
                                     </div>
                                 </div>
@@ -407,7 +407,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             <div className="space-y-2">
                                 <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">挨拶メッセージ</h4>
                                 <div className="bg-zinc-50 rounded-lg p-3 border border-zinc-100 text-sm text-zinc-700">
-                                    {currentSettings?.config_metadata?.greeting_message || '未設定'}
+                                    {currentSettings?.config_metadata?.greeting_message}
                                 </div>
                             </div>
 
@@ -432,7 +432,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">システムプロンプト (Raw)</h4>
                             <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800 flex-1 overflow-hidden">
                                 <pre className="text-xs text-zinc-300 whitespace-pre-wrap font-mono h-full overflow-y-auto">
-                                    {currentSettings?.system_prompt || '未設定'}
+                                    {currentSettings?.system_prompt}
                                 </pre>
                             </div>
                         </div>

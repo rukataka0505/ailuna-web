@@ -4,7 +4,7 @@
  */
 export interface ConfigMetadata {
     /** AIの口調・トーン（丁寧/フレンドリー/カジュアル） */
-    tone: 'polite' | 'friendly' | 'casual'
+    tone?: 'polite' | 'friendly' | 'casual'
     /** 電話応対時の第一声の挨拶メッセージ */
     greeting_message: string
     /** ビジネスの説明文（例：「居酒屋のAI電話番」） */
