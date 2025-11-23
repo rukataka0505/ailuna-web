@@ -20,7 +20,7 @@ export async function POST(req: Request) {
         const systemPrompt = SETUP_CONCIERGE_SYSTEM_PROMPT
 
         const response = await openai.chat.completions.create({
-            model: process.env.AILUNA_MODEL_HIGH || 'gpt-5-mini',
+            model: process.env.AILUNA_MODEL_MINI || 'gpt-5-mini',
             messages: [
                 { role: 'system', content: systemPrompt },
                 ...messages
