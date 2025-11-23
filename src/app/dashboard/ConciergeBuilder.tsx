@@ -519,7 +519,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             </div>
 
                             <div className="space-y-2">
-                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">重要ルール</h4>
+                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">詳細</h4>
                                 <ul className="bg-zinc-50 rounded-lg p-3 border border-zinc-100 space-y-1">
                                     {currentSettings?.config_metadata?.rules && currentSettings.config_metadata.rules.length > 0 ? (
                                         currentSettings.config_metadata.rules.map((rule, i) => (
