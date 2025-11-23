@@ -237,7 +237,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     }
 
     const handleResetConversation = async () => {
-        if (!window.confirm('会話履歴がすべて消去されますが、よろしいですか？\nこの操作は取り消せません。')) {
+        if (!window.confirm('会話履歴がすべて消去されますが、よろしいですか？\nこの操作は取り消せません。\n（すでに生成されたプロンプトは残ります）')) {
             return
         }
 
