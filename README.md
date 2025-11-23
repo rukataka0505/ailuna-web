@@ -289,13 +289,29 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
   2. `../supabase/add_account_name_column.sql` の内容をコピーし、エディタに貼り付けます。
   3. **Run** ボタンをクリックして実行します。
   4. これにより `profiles` テーブルに `account_name` カラムが追加されます。
+
+  ### 8. Setup Concierge トーク履歴機能のセットアップ（追加セットアップ）
+  **重要**: Setup Concierge（AIエージェント設定）のトーク履歴保存機能を使用する場合は、以下のSQLファイルを実行してください：
   
-  ### 8. テーブル作成の確認
+  1. Supabase ダッシュボードの **SQL Editor** を開きます。
+  2. `../supabase/concierge_chat_history.sql` の内容をコピーし、エディタに貼り付けます。
+  3. **Run** ボタンをクリックして実行します。
+  4. これにより `concierge_chat_history` テーブルが作成されます。
+  
+  **このテーブルがないと以下のエラーが発生します**:
+  ```
+  Could not find the table 'public.concierge_chat_history' in the schema cache
+  ```
+  
+  詳細な手順は `MIGRATION_GUIDE.md` を参照してください。
+  
+  ### 9. テーブル作成の確認
   左サイドバーの **Table Editor** を開き、以下のテーブルが作成されていることを確認してください：
   
   - `profiles`: ユーザー情報（Stripe IDなど）
   - `user_prompts`: AI設定（挨拶文、事業説明）
   - `call_logs`: 通話履歴（Call Engine からの保存用）
+  - `concierge_chat_history`: Setup Concierge のトーク履歴（オプション）
  
  > [!IMPORTANT]
  > `user_prompts` テーブルの `user_id` カラムには **Unique** 制約が必要です。`schema.sql` にはこれが含まれていますが、もし手動で作成した場合は必ず追加してください。これがないと設定の保存（Upsert）が正しく動作しません。
@@ -330,10 +346,21 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
    - `created_at`: 通話日時
    - `updated_at`: 更新日時
 
+4. **`public.concierge_chat_history`** (Setup Concierge トーク履歴)
+   - `id`: UUID (Primary Key)
+   - `user_id`: UUID (`profiles.id` 参照, UNIQUE制約)
+   - `messages`: JSONB 形式のメッセージ配列
+     - 各メッセージは `role`, `content`, `timestamp` を含む
+     - 最新50件のメッセージのみ保持
+   - `created_at`: 会話開始日時
+   - `updated_at`: 最終更新日時
+   - **用途**: Setup Concierge（AIエージェント設定）での対話履歴を保存し、ページ再読み込み時に復元
+
 ### セキュリティ (RLS)
 - ユーザーは自身のデータのみ読み書き可能 (`auth.uid() = user_id`)
 - `profiles` はユーザー登録時にトリガーによって自動作成されます
 - `user_prompts` はダッシュボードで設定を保存したタイミングで作成・更新されます
+- `concierge_chat_history` は Setup Concierge での会話中に自動保存されます
 
 ## ダッシュボード設定の保存仕様
 
