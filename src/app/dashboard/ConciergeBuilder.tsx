@@ -78,6 +78,8 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
             if (data.error) throw new Error(data.error)
 
             setCurrentSettings(data)
+            // 自動的にVisualタブに切り替え
+            setActiveTab('visual')
         } catch (error) {
             console.error('Generate error:', error)
             alert('設定の生成に失敗しました。')
@@ -197,8 +199,8 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                         <button
                             onClick={() => setActiveTab('visual')}
                             className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'visual'
-                                    ? 'bg-white text-zinc-900 shadow-sm'
-                                    : 'text-zinc-500 hover:text-zinc-700'
+                                ? 'bg-white text-zinc-900 shadow-sm'
+                                : 'text-zinc-500 hover:text-zinc-700'
                                 }`}
                         >
                             Visual
@@ -206,8 +208,8 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                         <button
                             onClick={() => setActiveTab('code')}
                             className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'code'
-                                    ? 'bg-white text-zinc-900 shadow-sm'
-                                    : 'text-zinc-500 hover:text-zinc-700'
+                                ? 'bg-white text-zinc-900 shadow-sm'
+                                : 'text-zinc-500 hover:text-zinc-700'
                                 }`}
                         >
                             Code
