@@ -56,6 +56,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     const [isSaving, setIsSaving] = useState(false)
     const [isLoadingHistory, setIsLoadingHistory] = useState(true)
     const [justGenerated, setJustGenerated] = useState(false)
+    const [mobileTab, setMobileTab] = useState<'chat' | 'preview'>('chat')
 
     /**
      * 現在の設定（単一）
@@ -165,6 +166,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
             // 自動的にVisualタブに切り替え
             setActiveTab('visual')
             setJustGenerated(true)
+            setMobileTab('preview')
         } catch (error) {
             console.error('Generate error:', error)
             alert('設定の生成に失敗しました。')
@@ -205,6 +207,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
         }
 
         setMessages([initialMessage])
+        setMobileTab('chat')
 
         // Reset history in DB
         try {
@@ -224,9 +227,31 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     }
 
     return (
-        <div className="flex flex-col lg:flex-row lg:h-[calc(100vh-200px)] gap-6">
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-140px)] lg:h-[calc(100vh-200px)] gap-4 lg:gap-6">
+            {/* Mobile Tabs */}
+            <div className="lg:hidden flex bg-zinc-100 p-1 rounded-lg shrink-0">
+                <button
+                    onClick={() => setMobileTab('chat')}
+                    className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mobileTab === 'chat'
+                        ? 'bg-white text-zinc-900 shadow-sm'
+                        : 'text-zinc-500'
+                        }`}
+                >
+                    会話
+                </button>
+                <button
+                    onClick={() => setMobileTab('preview')}
+                    className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mobileTab === 'preview'
+                        ? 'bg-white text-zinc-900 shadow-sm'
+                        : 'text-zinc-500'
+                        }`}
+                >
+                    設定プレビュー
+                </button>
+            </div>
+
             {/* Left Side: Chat UI Area */}
-            <div className="flex-1 bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col h-[600px] lg:h-auto">
+            <div className={`flex-1 bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col ${mobileTab === 'chat' ? 'flex' : 'hidden'} lg:flex`}>
                 <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center">
                     <div>
                         <h3 className="font-semibold text-zinc-900">対話型セットアップ</h3>
@@ -340,7 +365,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                 過去バージョンとの比較や before/after 表示は含まれていません。
                 これは意図的な設計です。
             */}
-            <div className="w-full lg:w-[400px] bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col">
+            <div className={`w-full lg:w-[400px] bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col ${mobileTab === 'preview' ? 'flex' : 'hidden'} lg:flex`}>
                 <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex flex-col gap-3">
                     <div className="flex justify-between items-center">
                         <div>
