@@ -12,16 +12,18 @@ interface ConciergeBuilderProps {
 type Message = {
     role: 'user' | 'assistant'
     content: string
+    timestamp: string
 }
 
 export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'assistant', content: 'こんにちは！AiLunaのセットアップコンシェルジュです。あなたの会社の電話番AIを作成するために、いくつか質問をさせてください。まず、どのような業種・ビジネスをされていますか？' }
+        { role: 'assistant', content: 'こんにちは！AiLunaのセットアップコンシェルジュです。あなたの会社の電話番AIを作成するために、いくつか質問をさせてください。まず、どのような業種・ビジネスをされていますか？', timestamp: new Date().toISOString() }
     ])
     const [input, setInput] = useState('')
     const [isChatLoading, setIsChatLoading] = useState(false)
     const [isGenerating, setIsGenerating] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
+    const [isLoadingHistory, setIsLoadingHistory] = useState(true)
     const [currentSettings, setCurrentSettings] = useState<AgentSettings>(initialSettings)
     const [activeTab, setActiveTab] = useState<'visual' | 'code'>('visual')
     const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -34,11 +36,47 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
         scrollToBottom()
     }, [messages])
 
+    // Load chat history on mount
+    useEffect(() => {
+        const loadHistory = async () => {
+            try {
+                const response = await fetch('/api/builder/history')
+                const data = await response.json()
+
+                if (response.ok && data.messages && data.messages.length > 0) {
+                    setMessages(data.messages)
+                }
+            } catch (error) {
+                console.error('Failed to load chat history:', error)
+                // Keep default welcome message on error
+            } finally {
+                setIsLoadingHistory(false)
+            }
+        }
+
+        loadHistory()
+    }, [])
+
+    // Auto-save chat history
+    const saveHistory = async (messagesToSave: Message[]) => {
+        try {
+            await fetch('/api/builder/history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: messagesToSave })
+            })
+        } catch (error) {
+            console.error('Failed to save chat history:', error)
+            // Don't block UI on save errors
+        }
+    }
+
     const handleSendMessage = async () => {
         if (!input.trim() || isChatLoading) return
 
-        const userMessage: Message = { role: 'user', content: input }
-        setMessages(prev => [...prev, userMessage])
+        const userMessage: Message = { role: 'user', content: input, timestamp: new Date().toISOString() }
+        const updatedMessages = [...messages, userMessage]
+        setMessages(updatedMessages)
         setInput('')
         setIsChatLoading(true)
 
@@ -47,14 +85,19 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: [...messages, userMessage]
+                    messages: updatedMessages.map(m => ({ role: m.role, content: m.content }))
                 })
             })
 
             const data = await response.json()
             if (data.error) throw new Error(data.error)
 
-            setMessages(prev => [...prev, { role: 'assistant', content: data.content }])
+            const assistantMessage: Message = { role: 'assistant', content: data.content, timestamp: new Date().toISOString() }
+            const finalMessages = [...updatedMessages, assistantMessage]
+            setMessages(finalMessages)
+
+            // Auto-save after successful exchange
+            await saveHistory(finalMessages)
         } catch (error) {
             console.error('Chat error:', error)
             alert('エラーが発生しました。もう一度お試しください。')
@@ -127,29 +170,37 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                 </div>
 
                 <div className="flex-1 p-4 overflow-y-auto bg-zinc-50/30 space-y-4">
-                    {messages.map((msg, idx) => (
-                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`flex gap-2 max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'}`}>
-                                    {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-                                </div>
-                                <div className={`p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm'}`}>
-                                    {msg.content}
-                                </div>
-                            </div>
+                    {isLoadingHistory ? (
+                        <div className="flex justify-center items-center h-full">
+                            <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
                         </div>
-                    ))}
-                    {isChatLoading && (
-                        <div className="flex justify-start">
-                            <div className="flex gap-2">
-                                <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
-                                    <Bot className="h-4 w-4" />
+                    ) : (
+                        <>
+                            {messages.map((msg, idx) => (
+                                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`flex gap-2 max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'}`}>
+                                            {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                                        </div>
+                                        <div className={`p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm'}`}>
+                                            {msg.content}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="bg-white border border-zinc-200 p-3 rounded-2xl rounded-tl-none shadow-sm">
-                                    <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                            ))}
+                            {isChatLoading && (
+                                <div className="flex justify-start">
+                                    <div className="flex gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+                                            <Bot className="h-4 w-4" />
+                                        </div>
+                                        <div className="bg-white border border-zinc-200 p-3 rounded-2xl rounded-tl-none shadow-sm">
+                                            <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
+                            )}
+                        </>
                     )}
                     <div ref={messagesEndRef} />
                 </div>
