@@ -28,16 +28,31 @@ export async function POST(request: Request) {
             );
         }
 
-        // 4. Stripe Checkout Session を作成
+        const usagePriceId = process.env.NEXT_PUBLIC_STRIPE_USAGE_PRICE_ID;
+
+        // 4. line_items を動的に構築
+        const lineItems = [
+            {
+                price: priceId,
+                quantity: 1,
+            },
+        ];
+
+        // 従量課金IDが設定されている場合は追加
+        if (usagePriceId) {
+            lineItems.push({
+                price: usagePriceId,
+                quantity: 1,
+            });
+        } else {
+            console.warn('NEXT_PUBLIC_STRIPE_USAGE_PRICE_ID is not set. Usage-based billing will not be enabled.');
+        }
+
+        // 5. Stripe Checkout Session を作成
         const session = await stripe.checkout.sessions.create({
             mode: 'subscription',
             payment_method_types: ['card'],
-            line_items: [
-                {
-                    price: priceId,
-                    quantity: 1,
-                },
-            ],
+            line_items: lineItems,
             customer_email: user.email,
             client_reference_id: user.id, // Webhook での紐付けに使用
             metadata: {
@@ -47,7 +62,7 @@ export async function POST(request: Request) {
             cancel_url: `${origin}/dashboard?payment=cancelled`,
         });
 
-        // 5. セッション URL を返す
+        // 6. セッション URL を返す
         return NextResponse.json({ url: session.url });
 
     } catch (error) {

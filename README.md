@@ -515,7 +515,10 @@ npm run backup
     - キャンセル時は `/dashboard?payment=cancelled` にリダイレクトされます
     - **必要な環境変数**:
       - `STRIPE_SECRET_KEY`: Stripe シークレットキー
-      - `NEXT_PUBLIC_STRIPE_PRICE_ID`: サブスクリプションプランの Price ID
+      - `NEXT_PUBLIC_STRIPE_PRICE_ID`: サブスクリプションプランの固定料金 Price ID
+      - `NEXT_PUBLIC_STRIPE_USAGE_PRICE_ID` (オプション): 従量課金（通話料など）の Price ID
+        - 設定されている場合、固定料金と従量課金の両方を含むハイブリッド課金モデルとして動作します
+        - 設定されていない場合、固定料金のみのサブスクリプションとして動作します（後方互換性を保持）
 4.  **AIエージェント設定（Setup Concierge）**: 
     - 対話型でAI電話番の設定を生成・編集します
     - 詳細は上記「AIエージェント設定（Setup Concierge）」セクションを参照
