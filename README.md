@@ -5,194 +5,252 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
 
 ## 技術スタック
 
-- **Framework**: Next.js 16 (App Router)
+- **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS v4
 - **Auth & DB**: Supabase
+- **AI**: OpenAI API (GPT-4o, GPT-5 系列)
+- **Payment**: Stripe (サブスクリプション + 従量課金)
 - **Icons**: Lucide React
+- **Animation**: Framer Motion
+- **Validation**: Zod
 
-## 機能
+## 主要機能
 
-- **ランディングページ (LP)**:
-  - 未ログインユーザー向けのサービス紹介ページ（`/`）
-  - **構成**:
-    - ヘッダー: ロゴと認証ボタン（「ログイン」「無料で始める」）
-    - ヒーローセクション: キャッチコピーとメインCTAボタン
-    - 機能紹介セクション: 3つの主要機能を紹介
-    - フッターCTA: アカウント登録への誘導
-  - **強調している主要機能**:
-    - **トーク形式での通話履歴確認**: チャットのように会話を振り返れる機能
-    - **AIプロンプトの編集機能**: お店ごとにAIオペレーターをカスタマイズ可能
-    - **ダッシュボードでの可視化**: 着信状況・利用時間・請求額をひと目で把握
-  - レスポンシブデザイン
-  - **認証フォームは含まれません**（専用の `/login` ページに集約）
-- **ヘッダーナビゲーション**:
-  - 全ページ共通のヘッダーコンポーネント（`src/components/Header.tsx`）
-  - 左側: AiLunaロゴ（クリックでトップページへ）
-  - 右側: 
-    - 「ログイン」ボタン（テキストスタイル） → `/login?mode=login` に遷移
-    - 「無料で始める」ボタン（プライマリスタイル） → `/login?mode=signup` に遷移
-- **認証機能**:
-  - **認証ページ**: `/login` に統合（ログイン／新規登録の共通入り口）
-  - クエリパラメータ（`?mode=login` または `?mode=signup`）でタブを制御
-  - メールアドレス/パスワードによるサインアップ・ログイン
-  - Supabase Auth UI と Server Actions を併用
-  - 未認証ユーザーがダッシュボードにアクセスしようとすると、自動的にトップページへリダイレクト
-  - **新規登録時の必須入力項目**:
-    - メールアドレス
-    - パスワード
-    - パスワード（確認用）
-    - 氏（lastName）と名（firstName）- 同じ行で横並びに表示
-    - アカウント名（accountName）
-    - 登録完了後、`profiles` テーブルに以下が自動保存されます：
-      - `full_name`: 「氏」と「名」を結合した文字列（例：「大塚 孝雄」）
-      - `account_name`: 入力されたアカウント名（例：「大塚ラーメン本店」）
-    - **実装詳細**:
-      - `src/components/AuthForm.tsx`: フォーム入力のハンドリング
-      - `src/app/login/actions.ts`: `signup` サーバーアクション内で、Supabase Auth の `options.data` に `full_name` と `account_name` を渡す
-      - **Supabase Trigger**: `handle_new_user` 関数がトリガーされ、メタデータから `profiles` テーブルに値を自動挿入（`supabase/update_handle_new_user.sql` の適用が必要）
-  - **メール認証フロー**:
-    - サインアップ時、Supabase から送信される認証メールのリンクは `/auth/complete` にリダイレクトされます
-    - `/auth/callback` は内部的な認証コード交換用のルートハンドラーとして存在しますが、ユーザーが直接アクセスすることは想定されていません
-    - 認証リンククリック後、`/auth/complete`（完了画面）へ遷移
-    - 完了画面から「ログインしてマイページを開く」ボタンでダッシュボード（マイページ）へ移動
-    - **Supabase 設定要件**:
-      - Supabase Dashboard の Authentication → URL Configuration で以下を設定してください：
-        - Site URL: 本番環境のURL（例：`https://ailuna-web.vercel.app`）
-        - Redirect URLs: 以下のパターンを許可リストに追加
-          - `https://ailuna-web.vercel.app/**` (本番環境)
-          - `http://localhost:3000/**` (ローカル開発環境)
-      - これにより `/auth/complete` へのリダイレクトが正常に動作します
-    - **検証手順**:
-      - **ローカル環境**: 
-        1. `npm run dev` で開発サーバーを起動
-        2. 新しいメールアドレスでサインアップ
-        3. 届いたメールのURLに `redirect_to=http://localhost:3000/auth/complete` が含まれていることを確認
-        4. リンクをクリックして `/auth/complete` ページが表示されることを確認
-      - **本番環境**:
-        1. `https://ailuna-web.vercel.app` から新規登録
-        2. 届いたメールのURLに `redirect_to=https://ailuna-web.vercel.app/auth/complete` が含まれていることを確認
-        3. リンクをクリックして `/auth/complete` ページが表示されることを確認（404エラーにならないこと）
-  - **パスワードリセット機能**:
-    - ログインフォームから「パスワードをお忘れですか？」リンクで申請
-    - メールで送信されたリンクから `/auth/update-password` ページへ遷移
-    - 新しいパスワードを入力して更新
-    - 更新完了後はダッシュボードへ自動リダイレクト
-- **ダッシュボード**:
-  - ログイン済みユーザーのみアクセス可能 (`/dashboard`)
-  - ユーザー情報の表示
-  - **AIエージェント設定（Setup Concierge）**:
-    - **対話型セットアップ**: AIコンシェルジュとの会話を通じて、AI電話番の設定を自動生成
-    - **チャット機能**:
-      - ビジネス内容、口調、ルールなどをヒアリング
-      - 会話履歴は自動保存され、ページリロード後も復元される（`concierge_chat_history` テーブル）
-      - 最新50件のメッセージを保持
-    - **設定生成**:
-      - 3往復以上の対話後、「設定を生成する」ボタンが有効化
-      - OpenAI APIを使用して `system_prompt` と `config_metadata` を自動生成
-      - 既存設定がある場合は差分更新として動作（会話で触れた部分のみを更新）
-    - **設定プレビュー**:
-      - **重要**: プレビューは常に「現在の1つの設定」のみを表示します
-      - 過去バージョンとの比較や before/after 表示は意図的に含まれていません
-      - **Visualタブ**: 業種、口調、挨拶メッセージ、重要ルールをカード形式で表示
-      - **Codeタブ**: `system_prompt` の全文をRaw形式で表示
-    - **保存機能**:
-      - 「保存」ボタンで設定を `user_prompts` テーブルに永続化
-      - 保存後はAI電話番（Call Engine）が新しい設定を使用
-    - **設計思想**:
-      - シンプルさを重視し、単一の設定のみを管理
-      - 将来的にバージョン管理が必要な場合は、別画面・別コンポーネントとして実装予定
-  - **通話履歴**:
-    - アコーディオン形式で過去の通話ログを表示
-    - クリックで詳細な会話内容を展開/折りたたみ可能
-    - AI生成の要約タイトルで内容を一目で把握
-    - 日時、電話番号、要約を一覧表示
-    - **ページネーション機能**: 「さらに読み込む」ボタンで過去の履歴を順次ロード
-    - **高度なフィルター機能**: 
-      - **期間指定**: 開始日と終了日を指定してログを絞り込み
-      - **発信者指定**: 過去の発信者番号リストから特定の発信者を絞り込み
-      - フィルター適用中もページネーションが動作
-  - **メトリクス表示**:
-    - `call_logs` テーブルから集計した「着信対応回数」と「利用時間」を表示
-    - **着信対応回数**: ユーザーの全通話ログ数
-    - **利用時間**: `call_logs.duration_seconds` の合計（秒）を分単位で表示。
-      - `duration_seconds` が `NULL` のレコード（過去のログなど）は `0` 秒として計算されます。
-    - Next.js Streaming (Suspense) を利用し、計算中もスケルトン表示でUIをブロックしない設計
-    - **今月の請求額**:
-      - 現在はダミー表示（¥0）です。
-      - 将来的に通話時間や料金設定に基づいた計算ロジックが実装される予定です。
-  - ログアウト機能
-- **モバイル対応**:
-  - レスポンシブデザイン対応
-  - モバイル時はハンバーガーメニューからドロワーナビゲーションを表示
-  - ドロワーは**右側**からスライドインする仕様に変更されました
-- **ミドルウェア**:
-  - セッション管理とルート保護
-  - 未認証ユーザーのダッシュボードアクセス制限
-  - LP (`/`) へのパブリックアクセス許可
-- **電話番号表示**:
-  - ダッシュボード右上（サイドバーおよびモバイルヘッダー）にログインユーザーの電話番号を表示
-  - データソース: `profiles.phone_number` カラム
-  - 電話番号が登録されている場合: 「電話番号：+81-90-xxxx-xxxx」のように表示
-  - 電話番号が未登録の場合: 「電話番号：登録されていません」と表示
-  - コンポーネント: `src/components/UserPhoneDisplay.tsx`
-  - サーバーアクション: `src/app/dashboard/actions.ts` の `fetchUserProfile()`
-- **ダッシュボードヘッダー構成**:
-  - ダッシュボードのヘッダー（サイドバーおよびモバイルヘッダー）は以下の構成になっています：
-  - **アカウント情報カード**:
-    - ロゴ「AiLuna」の下に、アカウント名と電話番号を1つのカードで表示
-    - データソース: `profiles.account_name` および `profiles.phone_number` カラム
-    - **デザイン**: アイコンベースのモダンなレイアウト
-      - アカウント名: User アイコン + 名前（太字）
-      - 電話番号: Phone アイコン + 番号（サブ情報）
-      - デスクトップでは1行表示（例：👤 rukataka0505 ・ 📞 +1573...）
-      - モバイルでは折り返し対応
-    - **未登録時の表示**:
-      - アカウント名が未設定の場合: 「未設定」と表示
-      - 電話番号が未登録の場合: 「未登録」とグレーアウト表示
-    - コンポーネント: `src/components/AccountInfoCard.tsx`
+### 1. ランディングページ (`/`)
 
-## 静的ページ
+未ログインユーザー向けのサービス紹介ページ
 
-### 利用規約ページ (`/terms`)
+**構成**:
+- ヘッダー: ロゴと認証ボタン（「ログイン」「無料で始める」）
+- ヒーローセクション: キャッチコピーとメインCTAボタン
+- 機能紹介セクション: 3つの主要機能を紹介
+  - **トーク形式での通話履歴確認**: チャットのように会話を振り返れる機能
+  - **AIプロンプトの編集機能**: お店ごとにAIオペレーターをカスタマイズ可能
+  - **ダッシュボードでの可視化**: 着信状況・利用時間・請求額をひと目で把握
+- フッターCTA: アカウント登録への誘導
+- レスポンシブデザイン対応
+
+### 2. 認証機能
+
+**認証ページ** (`/login`):
+- ログイン／新規登録の共通入り口
+- クエリパラメータ（`?mode=login` または `?mode=signup`）でタブを制御
+- メールアドレス/パスワードによるサインアップ・ログイン
+- Supabase Auth と Server Actions を併用
+
+**新規登録時の必須入力項目**:
+- メールアドレス
+- パスワード（確認用含む）
+- 氏（lastName）と名（firstName）- 横並び表示
+- アカウント名（accountName）
+
+登録完了後、`profiles` テーブルに以下が自動保存されます：
+- `full_name`: 「氏」と「名」を結合した文字列（例：「大塚 孝雄」）
+- `account_name`: 入力されたアカウント名（例：「大塚ラーメン本店」）
+
+**実装詳細**:
+- `src/components/AuthForm.tsx`: フォーム入力のハンドリング
+- `src/app/login/actions.ts`: `signup` サーバーアクション
+- **Supabase Trigger**: `handle_new_user` 関数がトリガーされ、メタデータから `profiles` テーブルに値を自動挿入
+
+**メール認証フロー**:
+- サインアップ時、認証メールのリンクは `/auth/complete` にリダイレクト
+- `/auth/callback` は内部的な認証コード交換用のルートハンドラー
+- 認証リンククリック後、`/auth/complete`（完了画面）へ遷移
+- 完了画面から「ログインしてマイページを開く」ボタンでダッシュボードへ移動
+
+**Supabase 設定要件**:
+Supabase Dashboard の Authentication → URL Configuration で以下を設定：
+- Site URL: 本番環境のURL（例：`https://ailuna-web.vercel.app`）
+- Redirect URLs: 以下のパターンを許可リストに追加
+  - `https://ailuna-web.vercel.app/**` (本番環境)
+  - `http://localhost:3000/**` (ローカル開発環境)
+
+**パスワードリセット機能**:
+- ログインフォームから「パスワードをお忘れですか？」リンクで申請
+- メールで送信されたリンクから `/auth/update-password` ページへ遷移
+- 新しいパスワードを入力して更新
+- 更新完了後はダッシュボードへ自動リダイレクト
+
+**認証フォームの強化機能**:
+1. パスワード表示切り替え（Eye/EyeOff アイコン）
+2. パスワード確認機能（新規登録時のみ）
+3. モード切り替えアニメーション（Framer Motion）
+4. 登録完了フィードバック
+5. ボタン操作感の向上（クリックアニメーション、処理中表示）
+
+### 3. ダッシュボード (`/dashboard`)
+
+ログイン済みユーザーのみアクセス可能なマイページ
+
+**セクション構成**:
+
+#### 3.1 ダッシュボード（メトリクス表示）
+- **着信対応回数**: ユーザーの全通話ログ数
+- **利用時間**: `call_logs.duration_seconds` の合計（秒）を分単位で表示
+  - `duration_seconds` が `NULL` のレコードは `0` 秒として計算
+- **今月の請求額**: 現在はダミー表示（¥0）
+  - 将来的に通話時間や料金設定に基づいた計算ロジックが実装予定
+- Next.js Streaming (Suspense) を利用し、計算中もスケルトン表示でUIをブロックしない設計
+
+#### 3.2 アカウント管理
+- アカウント情報の確認・変更（現在はプレースホルダー）
+
+#### 3.3 プラン・決済
+- 現在のプラン（フリープラン）の表示
+- プロプランへのアップグレード機能
+- **Stripe Checkout 連携**:
+  - 「アップグレード」ボタンをクリックすると、Stripe の決済ページへ遷移
+  - 決済完了後は `/dashboard?payment=success` にリダイレクト
+  - キャンセル時は `/dashboard?payment=cancelled` にリダイレクト
+- **ハイブリッド課金モデル**:
+  - 固定料金（月額）と従量課金（通話料）の両方に対応
+  - `NEXT_PUBLIC_STRIPE_USAGE_PRICE_ID` が設定されている場合、従量課金も含む
+  - 設定されていない場合、固定料金のみのサブスクリプションとして動作（後方互換性）
+
+**必要な環境変数**:
+- `STRIPE_SECRET_KEY`: Stripe シークレットキー
+- `NEXT_PUBLIC_STRIPE_PRICE_ID`: サブスクリプションプランの固定料金 Price ID
+- `NEXT_PUBLIC_STRIPE_USAGE_PRICE_ID` (オプション): 従量課金の Price ID
+
+#### 3.4 AIエージェント設定（Setup Concierge）
+
+**対話型セットアップ**: AIコンシェルジュとの会話を通じて、AI電話番の設定を自動生成
+
+**チャット機能**:
+- ビジネス内容、口調、ルールなどをヒアリング
+- 会話履歴は自動保存され、ページリロード後も復元される（`concierge_chat_history` テーブル）
+- 最新50件のメッセージを保持
+- API エンドポイント: `/api/builder/chat`
+
+**設定生成**:
+- 3往復以上の対話後、「設定を生成する」ボタンが有効化
+- OpenAI API を使用して `system_prompt` と `config_metadata` を自動生成
+- 既存設定がある場合は差分更新として動作（会話で触れた部分のみを更新）
+- API エンドポイント: `/api/builder/generate`
+- 使用モデル: `AILUNA_MODEL_MINI` (デフォルト: gpt-5-mini)
+
+**設定プレビュー**:
+- **重要**: プレビューは常に「現在の1つの設定」のみを表示
+- 過去バージョンとの比較や before/after 表示は意図的に含まれていない
+- **Visualタブ**: 業種、口調、挨拶メッセージ、重要ルールをカード形式で表示
+- **Codeタブ**: `system_prompt` の全文をRaw形式で表示
+- **プロンプト編集機能**: 
+  - Codeタブで直接編集可能
+  - 編集後、AIが自動的にパース（`/api/builder/parse`）
+  - パース結果がVisualタブに反映される（逆同期）
+
+**保存機能**:
+- 「保存」ボタンで設定を `user_prompts` テーブルに永続化
+- 保存後はAI電話番（Call Engine）が新しい設定を使用
+- サーバーアクション: `saveAgentSettings` in `src/app/dashboard/actions.ts`
+
+**リセット機能**:
+- **会話リセット**: チャット履歴をクリア（設定は保持）
+- **設定リセット**: 設定を完全削除（DBから物理削除）
+  - サーバーアクション: `deleteAgentSettings`
+
+**設計思想**:
+- シンプルさを重視し、単一の設定のみを管理
+- 将来的にバージョン管理が必要な場合は、別画面・別コンポーネントとして実装予定
+
+**関連プロンプト**:
+- `src/lib/prompts/setupConcierge.ts`: チャット用システムプロンプト
+- `src/lib/prompts/configBuilder.ts`: 設定生成用システムプロンプト
+- `src/lib/prompts/configParser.ts`: プロンプト解析用システムプロンプト
+
+#### 3.5 通話履歴
+
+- アコーディオン形式で過去の通話ログを表示
+- クリックで詳細な会話内容を展開/折りたたみ可能
+- AI生成の要約タイトルで内容を一目で把握
+- 日時、電話番号、要約を一覧表示
+
+**ページネーション機能**:
+- 「さらに読み込む」ボタンで過去の履歴を順次ロード
+- サーバーアクション: `fetchCallLogsPaginated`
+
+**高度なフィルター機能**:
+- **期間指定**: 開始日と終了日を指定してログを絞り込み
+- **発信者指定**: 過去の発信者番号リストから特定の発信者を絞り込み
+- フィルター適用中もページネーションが動作
+- ポップアップ表示で画面の専有面積を削減
+
+**フィルターUI改善**:
+- フィルターアイコンボタンをクリックした時のみ条件設定フォームを表示
+- 視認性の向上（ラベルテキスト色を濃く調整）
+- 直感的な開閉操作（アイコンクリックで開く、外側クリック/×ボタンで閉じる）
+
+### 4. ヘッダーナビゲーション
+
+全ページ共通のヘッダーコンポーネント（`src/components/Header.tsx`）
+
+- 左側: AiLunaロゴ（クリックでトップページへ）
+- 右側: 
+  - 「ログイン」ボタン（テキストスタイル） → `/login?mode=login` に遷移
+  - 「無料で始める」ボタン（プライマリスタイル） → `/login?mode=signup` に遷移
+
+### 5. ダッシュボードヘッダー構成
+
+ダッシュボードのヘッダー（サイドバーおよびモバイルヘッダー）
+
+**アカウント情報カード**:
+- ロゴ「AiLuna」の下に、アカウント名と電話番号を1つのカードで表示
+- データソース: `profiles.account_name` および `profiles.phone_number` カラム
+- **デザイン**: アイコンベースのモダンなレイアウト
+  - アカウント名: User アイコン + 名前（太字）
+  - 電話番号: Phone アイコン + 番号（サブ情報）
+  - デスクトップでは1行表示（例：👤 rukataka0505 ・ 📞 +1573...）
+  - モバイルでは折り返し対応
+- **未登録時の表示**:
+  - アカウント名が未設定の場合: 「未設定」と表示
+  - 電話番号が未登録の場合: 「未登録」とグレーアウト表示
+- コンポーネント: `src/components/AccountInfoCard.tsx`
+- サーバーアクション: `fetchUserProfile()` in `src/app/dashboard/actions.ts`
+
+### 6. モバイル対応
+
+- レスポンシブデザイン対応
+- モバイル時はハンバーガーメニューからドロワーナビゲーションを表示
+- ドロワーは**右側**からスライドインする仕様
+- モバイル入力フィールドの自動ズーム防止（`text-base lg:text-sm`）
+- モバイルプレビュー高さの最適化
+
+### 7. ミドルウェア
+
+セッション管理とルート保護（`src/middleware.ts`）
+
+- 未認証ユーザーのダッシュボードアクセス制限
+- LP (`/`) へのパブリックアクセス許可
+- 認証済みユーザーの自動リダイレクト
+
+### 8. 静的ページ
+
+#### 利用規約ページ (`/terms`)
 - **目的**: AiLunaサービスの利用条件を明示
-- **アクセス**: `http://localhost:3000/terms`
-- **構成**:
-  - 第1条（適用）
-  - 第2条（定義）
-  - 第3条（登録）
-  - 第4条（禁止事項）
-  - 第5条（サービスの提供の停止・中断）
-  - 第6条（免責事項）
-  - 第7条（利用規約の変更）
-  - 第8条（準拠法・裁判管轄）
+- **構成**: 第1条〜第8条（適用、定義、登録、禁止事項、サービスの提供の停止・中断、免責事項、利用規約の変更、準拠法・裁判管轄）
 - **デザイン**: 既存ページと統一されたグラデーション背景、読みやすい余白設定、レスポンシブ対応
 - **注意**: 現在の内容はドラフト版です。正式版は法的レビューを経て公開される予定です。
 
-### プライバシーポリシーページ (`/privacy`)
+#### プライバシーポリシーページ (`/privacy`)
 - **目的**: ユーザー情報の取り扱い方針を説明
-- **アクセス**: `http://localhost:3000/privacy`
 - **構成**:
-  - 1. 収集する情報（アカウント情報、通話ログ、自動収集データ）
-  - 2. 情報の利用目的
-  - 3. 情報の第三者提供（Supabase、OpenAI、Twilioの利用を明記）
-  - 4. 情報の保存期間・削除
-  - 5. セキュリティ対策
-  - 6. クッキー等の利用
-  - 7. プライバシーポリシーの変更
-  - 8. お問い合わせ窓口（現在は準備中）
+  1. 収集する情報（アカウント情報、通話ログ、自動収集データ）
+  2. 情報の利用目的
+  3. 情報の第三者提供（Supabase、OpenAI、Twilioの利用を明記）
+  4. 情報の保存期間・削除
+  5. セキュリティ対策
+  6. クッキー等の利用
+  7. プライバシーポリシーの変更
+  8. お問い合わせ窓口（現在は準備中）
 - **デザイン**: 利用規約ページと統一されたレイアウト、セクションごとの明確な見出し
 - **注意**: 現在の内容はドラフト版です。正式版は法的レビューを経て公開される予定です。
 
-### 今後の予定
-- フッターへの「利用規約」「プライバシーポリシー」リンクの追加（別タスクで実装予定）
-- 法的レビュー後の文言修正
-- お問い合わせ窓口情報の追加
+### 9. UI/UX改善
 
-## UI/UX改善
-
-### 統一された操作感（インタラクション）
-アプリ全体のボタンやインタラクティブ要素に対し、一貫した操作フィードバックを提供します:
+#### 統一された操作感（インタラクション）
+アプリ全体のボタンやインタラクティブ要素に対し、一貫した操作フィードバックを提供：
 
 1. **クリックエフェクト**
    - 全ての主要ボタンに `active:scale-[0.96]` を適用
@@ -208,204 +266,184 @@ Next.jsとSupabaseを使用して構築されており、セキュアな認証�
    - `cursor: not-allowed` でインタラクション不可を明示
    - スピナーアイコンと「処理中...」テキストで状態を可視化
 
-### 認証フォームの強化
-カスタム認証フォーム (`src/components/AuthForm.tsx`) に以下の機能を実装し、ユーザーエクスペリエンスを大幅に向上させました:
-
-1. **パスワードリセット機能**
-   - ログインフォームに「パスワードをお忘れですか?」リンクを配置
-   - クリックでリセットモードに切り替わり、メールアドレス入力のみを表示
-   - メール送信後、「再設定メールを送信しました」という完了画面を表示
-   - メール内のリンクから `/auth/update-password` ページへ遷移
-   - 新しいパスワードを2回入力（確認用）して変更を確定
-
-2. **ボタン操作感の向上**
-   - クリック時のスケールアニメーション (`active:scale-[0.96]`) を適用
-   - 処理中はボタンを無効化し、スピナーと「処理中...」テキストを表示
-   - 二重送信を防止
-
-3. **パスワード表示切り替え**
-   - パスワード入力欄に目のアイコン (Eye/EyeOff) を配置
-   - クリックでパスワードの表示/非表示を切り替え可能
-
-4. **パスワード確認機能**
-   - 新規登録時のみ確認用パスワード入力欄を表示
-   - クライアント側でパスワード一致を検証
-   - 不一致時は即座にエラーメッセージを表示
-
-5. **モード切り替えアニメーション**
-   - `framer-motion` を使用したスムーズなトランジション
-   - ログイン ⇔ 新規登録 ⇔ パスワードリセットの切り替え時にフェード/スライド効果
-
-6. **登録完了フィードバック**
-   - 登録成功時は「認証メールを送信しました」メッセージを表示
-   - フォームを非表示にし、完了画面に切り替え
-   - サーバーアクション (`signup`) は成功時に `{ success: true }` を返す仕様に変更
-
-### その他のUI改善
-- **認証完了ページ** (`/auth/complete`): 「ログインしてマイページを開く」ボタンにクリックアニメーションを適用
-- **パスワード更新ページ** (`/auth/update-password`): 統一されたデザインとインタラクションを実装
-- **ダッシュボード**: 
-  - 「設定を保存する」ボタンとログアウトボタンにクリックアニメーションを適用
-  - 通話履歴フィルターの「検索」「クリア」ボタンにも統一インタラクションを適用
-- 統一されたボタンフィードバックによる一貫したUI体験
-
-### 通話履歴フィルターの改善
-通話履歴リストのフィルター機能（`src/components/CallLogList.tsx`）を以下の通り改修しました：
-
-1. **ポップアップ表示への変更**
-   - フィルターアイコンボタンをクリックした時のみ条件設定フォームを表示
-   - 画面の専有面積を減らし、コンテンツ（履歴リスト）を広く表示
-   - 直感的な開閉操作（アイコンクリックで開く、外側クリック/×ボタンで閉じる）
-
-2. **視認性の向上**
-   - フィルター項目（開始日、終了日、発信者）のラベルテキスト色を濃く調整（`text-zinc-500` → `text-zinc-700`）
-   - 入力フィールド内のテキスト色も明確化
-   - 全体的なコントラスト比を高め、読みやすさを改善
-
-## Supabase セットアップ
- 
- ### 1. プロジェクトの作成
- Supabase で新しいプロジェクトを作成してください。
- 
- ### 2. スキーマの適用 (SQL Editor)
- データベースのテーブルとセキュリティ設定を作成します。
- 
- 1. Supabase ダッシュボードの左サイドバーから **SQL Editor** を開きます。
- 2. 「New Query」をクリックして新しいクエリエディタを開きます。
- 3. プロジェクトルートの `../supabase/schema.sql` の内容をすべてコピーし、エディタに貼り付けます。
- 4. **Run** ボタンをクリックして実行します。
- 5. 画面右下のログに "Success" と表示されれば完了です。
- 
- ### 3. 通話履歴機能のテーブル追加（追加セットアップ）
-  通話履歴機能を使用する場合は、以下のSQLファイルも実行してください：
-  
-  1. Supabase ダッシュボードの **SQL Editor** を開きます。
-  2. `../supabase/add_summary_column.sql` の内容をコピーし、エディタに貼り付けます。
-  3. **Run** ボタンをクリックして実行します。
-  4. これにより `call_logs` テーブルと `summary` カラムが追加されます。
-  
-  ### 5. 電話番号表示機能のセットアップ（追加セットアップ）
-  電話番号表示機能を使用する場合は、以下のSQLファイルも実行してください：
-  
-  1. Supabase ダッシュボードの **SQL Editor** を開きます。
-  2. `../supabase/add_phone_number_column.sql` の内容をコピーし、エディタに貼り付けます。
-  3. **Run** ボタンをクリックして実行します。
-  4. これにより `profiles` テーブルに `phone_number` カラムが追加されます。
-  
-  ### 6. 氏名カラムのセットアップ（追加セットアップ）
-  氏名を保存する機能を使用する場合は、以下のSQLファイルも実行してください：
-  
-  1. Supabase ダッシュボードの **SQL Editor** を開きます。
-  2. `../supabase/add_full_name_column.sql` の内容をコピーし、エディタに貼り付けます。
-  3. **Run** ボタンをクリックして実行します。
-  4. これにより `profiles` テーブルに `full_name` カラムが追加されます。
-  
-  ### 7. アカウント名表示機能のセットアップ（追加セットアップ）
-  アカウント名表示機能を使用する場合は、以下のSQLファイルも実行してください：
-  
-  1. Supabase ダッシュボードの **SQL Editor** を開きます。
-  2. `../supabase/add_account_name_column.sql` の内容をコピーし、エディタに貼り付けます。
-  3. **Run** ボタンをクリックして実行します。
-  4. これにより `profiles` テーブルに `account_name` カラムが追加されます。
-
-  ### 8. Setup Concierge トーク履歴機能のセットアップ（追加セットアップ）
-  **重要**: Setup Concierge（AIエージェント設定）のトーク履歴保存機能を使用する場合は、以下のSQLファイルを実行してください：
-  
-  1. Supabase ダッシュボードの **SQL Editor** を開きます。
-  2. `../supabase/concierge_chat_history.sql` の内容をコピーし、エディタに貼り付けます。
-  3. **Run** ボタンをクリックして実行します。
-  4. これにより `concierge_chat_history` テーブルが作成されます。
-  
-  **このテーブルがないと以下のエラーが発生します**:
-  ```
-  Could not find the table 'public.concierge_chat_history' in the schema cache
-  ```
-  
-  詳細な手順は `MIGRATION_GUIDE.md` を参照してください。
-  
-  ### 9. テーブル作成の確認
-  左サイドバーの **Table Editor** を開き、以下のテーブルが作成されていることを確認してください：
-  
-  - `profiles`: ユーザー情報（Stripe IDなど）
-  - `user_prompts`: AI設定（挨拶文、事業説明）
-  - `call_logs`: 通話履歴（Call Engine からの保存用）
-  - `concierge_chat_history`: Setup Concierge のトーク履歴（オプション）
- 
- > [!IMPORTANT]
- > `user_prompts` テーブルの `user_id` カラムには **Unique** 制約が必要です。`schema.sql` にはこれが含まれていますが、もし手動で作成した場合は必ず追加してください。これがないと設定の保存（Upsert）が正しく動作しません。
-
 ## データベース設計
 
 ### テーブル構成
 
-1. **`public.profiles`** (ユーザー管理・課金用)
-   - `id`: UUID (Primary Key, `auth.users.id` 参照)
-   - `stripe_customer_id`: Stripe顧客ID
-   - `is_subscribed`: サブスクリプション状態
-   - `usage_count`: 利用回数
-   - `phone_number`: 電話番号（国際形式、例：+81-90-1234-5678）
-   - `full_name`: 氏名（例：大塚 孝雄）
-   - `account_name`: アカウント名（表示用、例：AiLuna実験店舗）
+#### 1. `public.profiles` (ユーザー管理・課金用)
+- `id`: UUID (Primary Key, `auth.users.id` 参照)
+- `stripe_customer_id`: Stripe顧客ID
+- `is_subscribed`: サブスクリプション状態
+- `usage_count`: 利用回数
+- `phone_number`: 電話番号（国際形式、例：+81-90-1234-5678）
+- `full_name`: 氏名（例：大塚 孝雄）
+- `account_name`: アカウント名（表示用、例：AiLuna実験店舗）
+- `updated_at`: 更新日時
 
-2. **`public.user_prompts`** (AI設定用)
-   - `id`: UUID (Primary Key)
-   - `user_id`: UUID (`profiles.id` 参照)
-   - `greeting_message`: 挨拶メッセージ
-   - `business_description`: 事業内容・指示
+#### 2. `public.user_prompts` (AI設定用)
+- `id`: UUID (Primary Key)
+- `user_id`: UUID (`profiles.id` 参照, **UNIQUE制約**)
+- `greeting_message`: 挨拶メッセージ（DB直接保存用、レガシーフィールド）
+- `business_description`: 事業内容・指示（DB直接保存用、レガシーフィールド）
+- `system_prompt`: AI電話番の完全なシステムプロンプト（TEXT型）
+- `config_metadata`: 設定メタデータ（JSONB型）
+  - `tone`: 口調 ('polite' | 'friendly' | 'casual')
+  - `greeting_message`: 挨拶メッセージ（プレビュー表示用）
+  - `business_description`: 事業内容（プレビュー表示用）
+  - `rules`: ルール配列
+  - `business_type`: 業種
+- `created_at`: 作成日時
+- `updated_at`: 更新日時
 
-3. **`public.call_logs`** (通話履歴)
-   - `id`: UUID (Primary Key)
-   - `user_id`: UUID (`profiles.id` 参照)
-   - `call_sid`: Twilio Call SID
-   - `caller_number`: 発信者電話番号
-   - `transcript`: JSONB 形式の会話ログ
-   - `summary`: AI生成の要約タイトル（20文字程度）
-   - `duration_seconds`: 通話時間（秒単位）
-   - `created_at`: 通話日時
-   - `updated_at`: 更新日時
+> [!IMPORTANT]
+> `user_prompts` テーブルの `user_id` カラムには **Unique** 制約が必要です。これがないと設定の保存（Upsert）が正しく動作しません。
 
-4. **`public.concierge_chat_history`** (Setup Concierge トーク履歴)
-   - `id`: UUID (Primary Key)
-   - `user_id`: UUID (`profiles.id` 参照, UNIQUE制約)
-   - `messages`: JSONB 形式のメッセージ配列
-     - 各メッセージは `role`, `content`, `timestamp` を含む
-     - 最新50件のメッセージのみ保持
-   - `created_at`: 会話開始日時
-   - `updated_at`: 最終更新日時
-   - **用途**: Setup Concierge（AIエージェント設定）での対話履歴を保存し、ページ再読み込み時に復元
+#### 3. `public.call_logs` (通話履歴)
+- `id`: UUID (Primary Key)
+- `user_id`: UUID (`profiles.id` 参照)
+- `call_sid`: Twilio Call SID
+- `caller_number`: 発信者電話番号
+- `transcript`: JSONB 形式の会話ログ
+- `summary`: AI生成の要約タイトル（20文字程度）
+- `duration_seconds`: 通話時間（秒単位）
+- `created_at`: 通話日時
+- `updated_at`: 更新日時
+
+**インデックス**:
+- `call_logs_user_id_idx` on `user_id`
+- `call_logs_created_at_idx` on `created_at desc`
+
+#### 4. `public.concierge_chat_history` (Setup Concierge トーク履歴)
+- `id`: UUID (Primary Key)
+- `user_id`: UUID (`profiles.id` 参照, **UNIQUE制約**)
+- `messages`: JSONB 形式のメッセージ配列
+  - 各メッセージは `role`, `content`, `timestamp` を含む
+  - 最新50件のメッセージのみ保持
+- `created_at`: 会話開始日時
+- `updated_at`: 最終更新日時
+- **用途**: Setup Concierge（AIエージェント設定）での対話履歴を保存し、ページ再読み込み時に復元
 
 ### セキュリティ (RLS)
+
 - ユーザーは自身のデータのみ読み書き可能 (`auth.uid() = user_id`)
 - `profiles` はユーザー登録時にトリガーによって自動作成されます
 - `user_prompts` はダッシュボードで設定を保存したタイミングで作成・更新されます
 - `concierge_chat_history` は Setup Concierge での会話中に自動保存されます
+- `call_logs` は Service Role で挿入可能（Call Engine からの保存用）
 
-## ダッシュボード設定の保存仕様
+## Supabase セットアップ
 
-- **保存先**: `user_prompts` テーブル
-- **データ構造**: 1ユーザーにつき1レコード (`user_id` で一意)
-- **挙動**:
-  - フォームを開くと、現在の設定が読み込まれます（未設定時は空欄）。
-  - 「設定を保存する」ボタンを押すと、`upsert` 処理が実行されます。
-  - 既存のレコードがあれば更新、なければ新規作成されます。
-  - 保存後はページが再検証され、最新の状態が表示されます。
+### 1. プロジェクトの作成
+Supabase で新しいプロジェクトを作成してください。
+
+### 2. スキーマの適用 (SQL Editor)
+データベースのテーブルとセキュリティ設定を作成します。
+
+1. Supabase ダッシュボードの左サイドバーから **SQL Editor** を開きます。
+2. 「New Query」をクリックして新しいクエリエディタを開きます。
+3. プロジェクトルートの `../supabase/schema.sql` の内容をすべてコピーし、エディタに貼り付けます。
+4. **Run** ボタンをクリックして実行します。
+5. 画面右下のログに "Success" と表示されれば完了です。
+
+### 3. 追加セットアップ（必須）
+
+以下のSQLファイルを順番に実行してください：
+
+#### 3.1 通話履歴機能のテーブル追加
+1. `../supabase/add_summary_column.sql` を実行
+2. `call_logs` テーブルと `summary` カラムが追加されます
+
+#### 3.2 電話番号表示機能のセットアップ
+1. `../supabase/add_phone_number_column.sql` を実行
+2. `profiles` テーブルに `phone_number` カラムが追加されます
+
+#### 3.3 氏名カラムのセットアップ
+1. `../supabase/add_full_name_column.sql` を実行
+2. `profiles` テーブルに `full_name` カラムが追加されます
+
+#### 3.4 アカウント名表示機能のセットアップ
+1. `../supabase/add_account_name_column.sql` を実行
+2. `profiles` テーブルに `account_name` カラムが追加されます
+
+#### 3.5 Setup Concierge トーク履歴機能のセットアップ（重要）
+1. `../supabase/concierge_chat_history.sql` を実行
+2. `concierge_chat_history` テーブルが作成されます
+
+**このテーブルがないと以下のエラーが発生します**:
+```
+Could not find the table 'public.concierge_chat_history' in the schema cache
+```
+
+詳細な手順は `MIGRATION_GUIDE.md` を参照してください。
+
+#### 3.6 システムプロンプトカラムのセットアップ（重要）
+1. `../supabase/add_system_prompt_columns.sql` を実行
+2. `user_prompts` テーブルに `system_prompt` (TEXT) と `config_metadata` (JSONB) カラムが追加されます
+
+#### 3.7 新規ユーザートリガーの更新
+1. `../supabase/update_handle_new_user.sql` を実行
+2. `handle_new_user` 関数が更新され、`full_name` と `account_name` がメタデータから自動挿入されます
+
+### 4. テーブル作成の確認
+左サイドバーの **Table Editor** を開き、以下のテーブルが作成されていることを確認してください：
+
+- `profiles`: ユーザー情報（Stripe IDなど）
+- `user_prompts`: AI設定（system_prompt、config_metadata）
+- `call_logs`: 通話履歴（Call Engine からの保存用）
+- `concierge_chat_history`: Setup Concierge のトーク履歴
+
+### 5. 認証設定
+
+Supabase Dashboard の **Authentication → URL Configuration** で以下を設定：
+
+- **Site URL**: 本番環境のURL（例：`https://ailuna-web.vercel.app`）
+- **Redirect URLs**: 以下のパターンを許可リストに追加
+  - `https://ailuna-web.vercel.app/**` (本番環境)
+  - `http://localhost:3000/**` (ローカル開発環境)
+
+これにより `/auth/complete` へのリダイレクトが正常に動作します。
 
 ## セットアップ
 
 ### 1. 環境変数の設定
 
-`.env.local` ファイルを作成し、Supabaseのプロジェクト情報を設定してください。
+`.env.local` ファイルを作成し、以下の情報を設定してください。
 
 ```bash
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# OpenAI
+OPENAI_API_KEY=your_openai_api_key
+AILUNA_MODEL_NANO=gpt-5-nano
+AILUNA_MODEL_MINI=gpt-5-mini
+AILUNA_MODEL_HIGH=gpt-5
+
+# Stripe (サーバーサイド用）
 STRIPE_SECRET_KEY=your_stripe_secret_key
+
+# Stripe (Webhook用 - CLIで取得したもの)
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+
+# Stripe (フロントエンド用 - Price ID)
+# 月額固定プランのID (例: ¥19,500/月)
+NEXT_PUBLIC_STRIPE_PRICE_ID=price_xxxxxxxxxxxxx
+
+# 従量課金のID (例: ¥30/分) - オプション
+NEXT_PUBLIC_STRIPE_USAGE_PRICE_ID=price_xxxxxxxxxxxxx
 ```
 
 ### 2. Stripe設定
 
 `npm install stripe` でライブラリを導入済みです。
 `.env.local` に `STRIPE_SECRET_KEY` を設定してください。
+
+**ハイブリッド課金モデル**:
+- `NEXT_PUBLIC_STRIPE_PRICE_ID`: 固定料金（必須）
+- `NEXT_PUBLIC_STRIPE_USAGE_PRICE_ID`: 従量課金（オプション）
+  - 設定されている場合、固定料金と従量課金の両方を含むハイブリッド課金モデルとして動作
+  - 設定されていない場合、固定料金のみのサブスクリプションとして動作（後方互換性）
 
 ### 3. インストールと実行
 
@@ -493,6 +531,20 @@ npm run backup
 
 ※ AIエージェントは自動でプッシュを行いません。バックアップが必要な場合はこのコマンドを使用してください。
 
+## API エンドポイント
+
+### 認証関連
+- `/api/auth/callback`: 認証コード交換用（内部使用）
+
+### Setup Concierge 関連
+- `/api/builder/chat`: チャット応答生成
+- `/api/builder/generate`: 設定生成（system_prompt + config_metadata）
+- `/api/builder/parse`: プロンプト解析（逆同期用）
+- `/api/builder/history`: チャット履歴の保存・取得
+
+### 決済関連
+- `/api/checkout`: Stripe Checkout Session 作成
+
 ## トラブルシューティング
 
 ### 通話要約が表示されない場合
@@ -501,28 +553,56 @@ npm run backup
 特に、`gpt-5.1` などの最新モデルを使用する場合は、バックエンド側のコードが `developer` ロールや `max_completion_tokens` に対応している必要があります。
 正常に生成された場合、Supabaseの `call_logs` テーブルの `summary` カラムにタイトルが保存され、自動的に一覧に反映されます。
 
-## マイページ（ダッシュボード）構成
+### concierge_chat_history テーブルが見つからない
 
-マイページ（`/dashboard`）は、以下の5つのセクションで構成されています：
+以下のエラーが発生する場合：
+```
+Could not find the table 'public.concierge_chat_history' in the schema cache
+```
 
-1.  **ダッシュボード**: 着信対応回数や利用時間のメトリクスを表示します。
-2.  **アカウント管理**: アカウント情報の確認・変更（現在はプレースホルダー）。
-3.  **プラン・決済**: 
-    - 現在のプラン（フリープラン）の表示
-    - プロプランへのアップグレード機能
-    - **Stripe Checkout 連携**: 「アップグレード」ボタンをクリックすると、Stripe の決済ページへ遷移します
-    - 決済完了後は `/dashboard?payment=success` にリダイレクトされます
-    - キャンセル時は `/dashboard?payment=cancelled` にリダイレクトされます
-    - **必要な環境変数**:
-      - `STRIPE_SECRET_KEY`: Stripe シークレットキー
-      - `NEXT_PUBLIC_STRIPE_PRICE_ID`: サブスクリプションプランの固定料金 Price ID
-      - `NEXT_PUBLIC_STRIPE_USAGE_PRICE_ID` (オプション): 従量課金（通話料など）の Price ID
-        - 設定されている場合、固定料金と従量課金の両方を含むハイブリッド課金モデルとして動作します
-        - 設定されていない場合、固定料金のみのサブスクリプションとして動作します（後方互換性を保持）
-4.  **AIエージェント設定（Setup Concierge）**: 
-    - 対話型でAI電話番の設定を生成・編集します
-    - 詳細は上記「AIエージェント設定（Setup Concierge）」セクションを参照
-    - チャット履歴の自動保存、設定プレビュー（単一設定のみ表示）、DB保存機能を提供
-5.  **通話履歴**: 過去の着信履歴と通話内容（書き起こし・要約）を確認できます。
+`../supabase/concierge_chat_history.sql` を実行して、テーブルを作成してください。
+詳細は `MIGRATION_GUIDE.md` を参照してください。
 
-左側のサイドバー（モバイルではハンバーガーメニュー）から各セクションに切り替えることができます。
+### system_prompt カラムが見つからない
+
+以下のエラーが発生する場合：
+```
+column "system_prompt" does not exist
+```
+
+`../supabase/add_system_prompt_columns.sql` を実行して、カラムを追加してください。
+
+### Stripe Checkout でエラーが発生する
+
+**従量課金（metered billing）のエラー**:
+```
+You cannot use `quantity` on a price with `usage_type=metered`
+```
+
+これは、従量課金の Price ID に `quantity` パラメータを指定した場合に発生します。
+`src/app/api/checkout/route.ts` で、従量課金の Price には `quantity` を含めないように実装されています。
+
+**環境変数の確認**:
+- `NEXT_PUBLIC_STRIPE_PRICE_ID` と `NEXT_PUBLIC_STRIPE_USAGE_PRICE_ID` が正しく設定されているか確認
+- 固定料金と従量課金の Price ID が逆になっていないか確認
+
+## 今後の予定
+
+- フッターへの「利用規約」「プライバシーポリシー」リンクの追加
+- 法的レビュー後の文言修正
+- お問い合わせ窓口情報の追加
+- アカウント管理セクションの実装
+- 請求額の自動計算ロジックの実装
+- バージョン管理機能の実装（別画面・別コンポーネント）
+
+## ライセンス
+
+Private
+
+## 関連ドキュメント
+
+- `MIGRATION_GUIDE.md`: データベースマイグレーション手順
+- `DEPLOYMENT_GUIDE.md`: デプロイメント手順
+- `DATABASE_FIX_SUMMARY.md`: データベース修正の詳細
+- `IMPLEMENTATION_SUMMARY.md`: 実装の詳細
+- `DIFFERENTIAL_UPDATE_GUIDE.md`: 差分更新の詳細
