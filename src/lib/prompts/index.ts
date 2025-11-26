@@ -8,4 +8,4 @@
 export * from './setupConcierge'
 export * from './configBuilder'
 export * from './configParser'
-export * from './callSummary'
+
