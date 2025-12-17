@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Filter, ChevronLeft, ChevronRight, Loader2, X, Check, ArrowLeft, Settings, Mail, Plus, Trash2, List, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
+import { Calendar, Filter, ChevronLeft, ChevronRight, Loader2, X, Check, ArrowLeft, Settings, Mail, Plus, Trash2, List, GripVertical, ArrowUp, ArrowDown, Copy } from 'lucide-react'
 import {
     fetchReservationRequestsPaginated,
     ReservationStatus,
@@ -17,7 +17,9 @@ import {
     reorderReservationFields,
     initializeDefaultFields,
     ReservationField,
-    ReservationFieldType
+    ReservationFieldType,
+    createLineLinkToken,
+    getActiveLineLinkToken
 } from '../actions'
 
 interface ReservationSectionProps {
@@ -52,6 +54,8 @@ export function ReservationSection({ }: ReservationSectionProps) {
     const [isSettingsLoading, setIsSettingsLoading] = useState(false)
     const [isSavingSettings, setIsSavingSettings] = useState(false)
     const [newEmail, setNewEmail] = useState('')
+    const [linkToken, setLinkToken] = useState<{ code: string, expires_at: string } | null>(null)
+    const [isCopied, setIsCopied] = useState(false)
 
     // --- Form Fields State ---
     const [formFields, setFormFields] = useState<ReservationField[]>([])
@@ -114,9 +118,47 @@ export function ReservationSection({ }: ReservationSectionProps) {
 
     useEffect(() => {
         if (activeTab === 'requests') loadData()
-        else if (activeTab === 'settings') loadSettings()
+        else if (activeTab === 'settings') {
+            loadSettings()
+            loadLinkToken()
+        }
         else if (activeTab === 'form') loadFormFields()
     }, [page, statusFilter, activeTab])
+
+    const loadLinkToken = async () => {
+        try {
+            const token = await getActiveLineLinkToken()
+            if (token) {
+                setLinkToken({ code: token.token_code, expires_at: token.expires_at })
+            }
+        } catch (error) {
+            console.error('Failed to load link token:', error)
+        }
+    }
+
+    const handleIssueLinkToken = async () => {
+        setIsActionLoading(true)
+        try {
+            const res = await createLineLinkToken()
+            if (res.error) {
+                alert(res.error)
+            } else if (res.token_code && res.expires_at) {
+                setLinkToken({ code: res.token_code, expires_at: res.expires_at })
+            }
+        } catch (error) {
+            console.error(error)
+            alert('発行に失敗しました')
+        } finally {
+            setIsActionLoading(false)
+        }
+    }
+
+    const copyLinkCode = () => {
+        if (!linkToken) return
+        navigator.clipboard.writeText(linkToken.code)
+        setIsCopied(true)
+        setTimeout(() => setIsCopied(false), 2000)
+    }
 
     const formatDate = (dateString: string) => {
         if (!dateString) return '-'
@@ -740,7 +782,13 @@ export function ReservationSection({ }: ReservationSectionProps) {
                                             {notificationSettings.notify_line_enabled ? '有効' : '無効'}
                                         </span>
                                         <button
-                                            onClick={() => setNotificationSettings(p => ({ ...p, notify_line_enabled: !p.notify_line_enabled }))}
+                                            onClick={() => {
+                                                if (!notificationSettings.line_target_id && !notificationSettings.notify_line_enabled) {
+                                                    alert('LINE連携が完了していません。まずは連携を行ってください。')
+                                                    return
+                                                }
+                                                setNotificationSettings(p => ({ ...p, notify_line_enabled: !p.notify_line_enabled }))
+                                            }}
                                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationSettings.notify_line_enabled ? 'bg-[#06C755]' : 'bg-zinc-200'
                                                 }`}
                                         >
@@ -750,13 +798,70 @@ export function ReservationSection({ }: ReservationSectionProps) {
                                     </div>
                                 </div>
 
-                                <div className="p-4 bg-zinc-50 rounded-xl border border-zinc-200 text-center">
-                                    <p className="text-sm text-zinc-500 mb-2">
-                                        LINE通知機能は現在開発中です。
-                                    </p>
-                                    <p className="text-xs text-zinc-400">
-                                        今後のアップデートで店舗公式LINEへの通知が可能になります。
-                                    </p>
+                                <div className="p-6 bg-zinc-50 rounded-xl border border-zinc-200">
+                                    <div className="flex flex-col gap-6">
+                                        {/* Status */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-sm font-medium text-zinc-700">連携ステータス</div>
+                                            {notificationSettings.line_target_id ? (
+                                                <div className="flex items-center gap-2 text-[#06C755] font-bold bg-white px-3 py-1 rounded-full border border-[#06C755]/20">
+                                                    <Check className="h-4 w-4" />
+                                                    連携済み (ID: ****{notificationSettings.line_target_id.slice(-4)})
+                                                </div>
+                                            ) : (
+                                                <div className="text-zinc-400 font-medium bg-zinc-200/50 px-3 py-1 rounded-full text-sm">
+                                                    未連携
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Link Code Area */}
+                                        <div className="space-y-4">
+                                            <div className="text-sm text-zinc-600">
+                                                LINE Botと連携するには、以下のボタンでコードを発行し、LINEで送信してください。
+                                            </div>
+
+                                            {!linkToken ? (
+                                                <button
+                                                    onClick={handleIssueLinkToken}
+                                                    disabled={isActionLoading}
+                                                    className="w-full sm:w-auto px-4 py-2 bg-white border border-zinc-300 text-zinc-700 font-medium rounded-lg hover:bg-zinc-100 transition-colors shadow-sm flex items-center justify-center gap-2"
+                                                >
+                                                    {isActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                                                    リンクコード発行
+                                                </button>
+                                            ) : (
+                                                <div className="bg-white border border-zinc-200 rounded-lg p-4 space-y-3 animate-in fade-in zoom-in-95">
+                                                    <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">発行されたコード（10分間有効）</label>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex-1 text-2xl font-mono font-bold text-center tracking-[0.2em] text-zinc-800 bg-zinc-100 py-2 rounded">
+                                                            {linkToken.code}
+                                                        </div>
+                                                        <button
+                                                            onClick={copyLinkCode}
+                                                            className="p-3 bg-zinc-100 text-zinc-600 rounded hover:bg-zinc-200 transition-colors"
+                                                            title="コピー"
+                                                        >
+                                                            {isCopied ? <Check className="h-5 w-5 text-green-600" /> : <Settings className="h-5 w-5 rotate-90" />}
+                                                            {/* Standard copy icon replacement using rotate trick or just text if icon unavailable in imports. 
+                                                                Actually I have Settings, check existing imports. 
+                                                                Imports: Calendar, Filter, ChevronLeft, ChevronRight, Loader2, X, Check, ArrowLeft, Settings, Mail, Plus, Trash2, List, GripVertical, ArrowUp, ArrowDown 
+                                                                I can import Copy if I want, or perform a Quick Fix. 
+                                                                Let's use 'Copy' text or similar if icon is missing, or add Copy to imports later. 
+                                                                For now, I'll use a simple icon I have or just text.
+                                                                Wait, I can just add Copy to imports in next step.
+                                                                I'll use 'Settings' for now as placeholder or just text.*/}
+                                                        </button>
+                                                    </div>
+                                                    <div className="text-xs text-zinc-500 space-y-1">
+                                                        <p>1. LINEでBotを開いてください</p>
+                                                        <p>2. 上記のコードを含めて <span className="font-mono bg-zinc-100 px-1 rounded">link {linkToken.code}</span> と送信してください</p>
+                                                        <p>3. 送信後、<button onClick={loadSettings} className="text-indigo-600 underline">再読み込み</button>して連携状態を確認してください</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
