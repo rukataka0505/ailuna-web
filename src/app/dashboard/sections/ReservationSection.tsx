@@ -117,7 +117,10 @@ export function ReservationSection({ }: ReservationSectionProps) {
     }
 
     useEffect(() => {
-        if (activeTab === 'requests') loadData()
+        if (activeTab === 'requests') {
+            loadData()
+            loadFormFields() // Load fields for label mapping in details
+        }
         else if (activeTab === 'settings') {
             loadSettings()
             loadLinkToken()
@@ -189,7 +192,10 @@ export function ReservationSection({ }: ReservationSectionProps) {
 
         if (dateStr && timeStr) return `${dateStr} ${timeStr}`
         if (dateStr) return dateStr
-        return req.requested_datetime_text || '未指定'
+        // If structured data is missing, we rely on the text preview in the UI below, so just return nothing or a fallback here?
+        // Actually the UI calls this function. If empty, maybe returns ''?
+        // Let's keep returning a fallback if completely empty, but the prompt says formatReservationDateTime is kept.
+        return '未指定'
     }
 
     const getStatusBadge = (status: string) => {
@@ -212,6 +218,19 @@ export function ReservationSection({ }: ReservationSectionProps) {
                 {labels}
             </span>
         )
+    }
+
+    const getAnswerPreview = (req: any) => {
+        if (req.requested_datetime_text) return req.requested_datetime_text
+
+        // Fallback to first few answers
+        if (req.answers && typeof req.answers === 'object') {
+            const values = Object.values(req.answers)
+                .filter(v => typeof v === 'string' || typeof v === 'number')
+                .slice(0, 2)
+            if (values.length > 0) return values.join(' / ')
+        }
+        return ''
     }
 
     const handleApprove = async () => {
@@ -397,6 +416,11 @@ export function ReservationSection({ }: ReservationSectionProps) {
         await reorderReservationFields(ids)
     }
 
+    const getAnswerLabel = (key: string) => {
+        const field = formFields.find(f => f.field_key === key)
+        return field ? field.label : key
+    }
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -504,12 +528,30 @@ export function ReservationSection({ }: ReservationSectionProps) {
                                                     {selectedRequest.party_size ? `${selectedRequest.party_size}名` : '未指定'}
                                                 </div>
                                             </div>
-                                            <div>
-                                                <label className="text-xs text-zinc-400">詳細・メモ</label>
-                                                <div className="text-base text-zinc-700 whitespace-pre-wrap">
-                                                    {selectedRequest.content || selectedRequest.memo || '（なし）'}
+
+                                            {/* Answers Loop */}
+                                            {selectedRequest.answers ? (
+                                                Object.entries(selectedRequest.answers).map(([key, value]) => {
+                                                    // Skip standard keys if already shown? (customer_name, etc might be in answers too, but usually separated in DB columns)
+                                                    // For now show everything in answers except maybe internal ones if any.
+                                                    if (!value) return null
+                                                    return (
+                                                        <div key={key}>
+                                                            <label className="text-xs text-zinc-400">{getAnswerLabel(key)}</label>
+                                                            <div className="text-base text-zinc-700 whitespace-pre-wrap">
+                                                                {String(value)}
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })
+                                            ) : (
+                                                <div>
+                                                    <label className="text-xs text-zinc-400">詳細・メモ</label>
+                                                    <div className="text-base text-zinc-700 whitespace-pre-wrap">
+                                                        {selectedRequest.content || selectedRequest.memo || '（なし）'}
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -552,9 +594,6 @@ export function ReservationSection({ }: ReservationSectionProps) {
                                         ) : (
                                             <div className="bg-red-50 p-6 rounded-xl border border-red-100 animate-in fade-in slide-in-from-top-2">
                                                 <h4 className="font-bold text-red-800 mb-2">却下の理由を入力</h4>
-                                                <p className="text-xs text-red-600 mb-4">
-                                                    ※ 現在、SMS送信機能は無効化されています。DBの状態のみ更新されます。
-                                                </p>
                                                 <textarea
                                                     className="w-full mb-4 border-red-200 rounded-lg focus:ring-red-500 focus:border-red-500 text-sm"
                                                     rows={3}
@@ -651,7 +690,7 @@ export function ReservationSection({ }: ReservationSectionProps) {
                                                         <td className="px-6 py-4 text-zinc-600">
                                                             <div>{formatReservationDateTime(req)}</div>
                                                             <div className="text-xs text-zinc-400 truncate max-w-[200px]">
-                                                                {req.content || req.memo || ''}
+                                                                {getAnswerPreview(req)}
                                                             </div>
                                                         </td>
                                                     </tr>
