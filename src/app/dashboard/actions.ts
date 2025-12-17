@@ -397,6 +397,14 @@ export async function approveReservationRequest(
         }
     } catch (smsError) {
         console.error('SMS sending failed:', smsError)
+        // Update internal_note with failure message
+        await supabase
+            .from('reservation_requests')
+            .update({
+                internal_note: (internalNote || '') + '\n【システム通知】SMS送信に失敗しました。'
+            })
+            .eq('id', id)
+
         return { success: '予約を承認しました。SMS通知の送信に失敗しました。' }
     }
 
@@ -494,6 +502,14 @@ export async function rejectReservationRequest(
         }
     } catch (smsError) {
         console.error('SMS sending failed:', smsError)
+        // Update internal_note with failure message
+        await supabase
+            .from('reservation_requests')
+            .update({
+                internal_note: (internalNote || '') + '\n【システム通知】SMS送信に失敗しました。'
+            })
+            .eq('id', id)
+
         return { success: '予約を却下しました。SMS通知の送信に失敗しました。' }
     }
 

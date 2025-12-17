@@ -6,8 +6,8 @@ It addresses the "Web" portion of the "Phone Reservation Flow Stabilization" ini
 
 ## Changes
 ### `src/app/dashboard/actions.ts`
-- **Feature**: Added logic to log `sms_body_sent` and `sms_sent_at` to the `reservation_requests` table immediately after a successful SMS transmission in `approveReservationRequest` and `rejectReservationRequest`.
-- **Purpose**: To provide an audit trail of what was sent to the customer and when, ensuring we can verify if notifications were double-sent or missed.
+- **Feature**: Added logic to log `sms_body_sent` and `sms_sent_at` to the `reservation_requests` table immediately after a successful SMS transmission.
+- **Feature**: Implemented fallback logging on SMS failure. If SMS fails, the error is appended to `internal_note` (e.g., "【システム通知】SMS送信に失敗しました") to alert operations.
 
 ### `src/app/dashboard/sections/ReservationSection.tsx`
 - **Fix**: Hardened `getAnswerPreview` to safely handle `req.answers` whether it comes as an object (expected) or an array (legacy/buggy data).
