@@ -330,18 +330,35 @@ export async function approveReservationRequest(
             .eq('id', user.id)
             .single()
 
-        const dateObj = new Date(request.requested_date)
-        const dateStr = dateObj.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })
-        const timeStr = dateObj.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+        // 日時の構築: Date型変換せず文字列として処理する
+        let dateStr = ''
+        if (request.requested_date) {
+            const parts = request.requested_date.split('-') // YYYY-MM-DD
+            if (parts.length === 3) {
+                dateStr = `${Number(parts[1])}/${Number(parts[2])}`
+            } else {
+                dateStr = request.requested_date
+            }
+        }
+
+        let timeStr = ''
+        if (request.requested_time) {
+            // HH:mm:ss -> HH:mm
+            timeStr = request.requested_time.substring(0, 5)
+        }
+
+        // 構造化データがない場合はテキストでフォールバック
+        const dateTimeDisplay = (dateStr && timeStr)
+            ? `${dateStr} ${timeStr}`
+            : (dateStr || request.requested_datetime_text || '')
+
         const partySizeStr = request.party_size ? `（人数:${request.party_size}）` : ''
 
-        const body = `ご予約を承りました。${dateStr} ${timeStr}${partySizeStr}で確定しました。`
+        const body = `ご予約を承りました。${dateTimeDisplay}${partySizeStr}で確定しました。`
         const fromNumber = profile?.phone_number || undefined
 
-        if (request.customer_phone || request.caller_number) {
-            // Use customer_phone if available, otherwise caller_number
-            const targetPhone = request.customer_phone || request.caller_number
-            await sendSMS(targetPhone, body, fromNumber)
+        if (request.customer_phone) {
+            await sendSMS(request.customer_phone, body, fromNumber)
         }
     } catch (smsError) {
         console.error('SMS sending failed:', smsError)
@@ -405,9 +422,8 @@ export async function rejectReservationRequest(
         const body = `申し訳ありません。ご希望の日時はお受けできませんでした。${reason ? '\n' + reason : ''}`
         const fromNumber = profile?.phone_number || undefined
 
-        if (request.customer_phone || request.caller_number) {
-            const targetPhone = request.customer_phone || request.caller_number
-            await sendSMS(targetPhone, body, fromNumber)
+        if (request.customer_phone) {
+            await sendSMS(request.customer_phone, body, fromNumber)
         }
     } catch (smsError) {
         console.error('SMS sending failed:', smsError)

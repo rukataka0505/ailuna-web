@@ -129,6 +129,27 @@ export function ReservationSection({ }: ReservationSectionProps) {
         })
     }
 
+    const formatReservationDateTime = (req: any) => {
+        let dateStr = ''
+        if (req.requested_date) {
+            const parts = req.requested_date.split('-')
+            if (parts.length === 3) {
+                dateStr = `${Number(parts[1])}/${Number(parts[2])}`
+            } else {
+                dateStr = req.requested_date
+            }
+        }
+
+        let timeStr = ''
+        if (req.requested_time) {
+            timeStr = req.requested_time.substring(0, 5)
+        }
+
+        if (dateStr && timeStr) return `${dateStr} ${timeStr}`
+        if (dateStr) return dateStr
+        return req.requested_datetime_text || '未指定'
+    }
+
     const getStatusBadge = (status: string) => {
         const styles = {
             pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -420,7 +441,7 @@ export function ReservationSection({ }: ReservationSectionProps) {
                                             <div>
                                                 <label className="text-xs text-zinc-400">電話番号</label>
                                                 <div className="text-base font-mono text-zinc-700">
-                                                    {selectedRequest.caller_number || '不明'}
+                                                    {selectedRequest.customer_phone || selectedRequest.caller_number || '不明'}
                                                 </div>
                                             </div>
                                         </div>
@@ -432,7 +453,7 @@ export function ReservationSection({ }: ReservationSectionProps) {
                                             <div>
                                                 <label className="text-xs text-zinc-400">希望日時</label>
                                                 <div className="text-lg font-medium text-zinc-900">
-                                                    {selectedRequest.requested_date ? formatDate(selectedRequest.requested_date) : '未指定'}
+                                                    {formatReservationDateTime(selectedRequest)}
                                                 </div>
                                             </div>
                                             <div>
@@ -579,14 +600,14 @@ export function ReservationSection({ }: ReservationSectionProps) {
                                                         </td>
                                                         <td className="px-6 py-4">
                                                             <div className="font-medium text-zinc-900">
-                                                                {req.customer_name || req.caller_number || '不明'}
+                                                                {req.customer_name || req.customer_phone || (req.caller_number ? req.caller_number : '不明')}
                                                             </div>
-                                                            {(req.customer_name && req.caller_number) && (
-                                                                <div className="text-xs text-zinc-400">{req.caller_number}</div>
+                                                            {(req.customer_name && (req.customer_phone || req.caller_number)) && (
+                                                                <div className="text-xs text-zinc-400">{req.customer_phone || req.caller_number}</div>
                                                             )}
                                                         </td>
                                                         <td className="px-6 py-4 text-zinc-600">
-                                                            <div>{req.requested_date ? formatDate(req.requested_date) : '-'}</div>
+                                                            <div>{formatReservationDateTime(req)}</div>
                                                             <div className="text-xs text-zinc-400 truncate max-w-[200px]">
                                                                 {req.content || req.memo || ''}
                                                             </div>
