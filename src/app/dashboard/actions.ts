@@ -1,5 +1,6 @@
 'use server'
 
+<<<<<<< HEAD
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -824,3 +825,14 @@ export async function reorderReservationFields(idsInOrder: string[]) {
     revalidatePath('/dashboard')
     return { success: '並べ替えを保存しました。' }
 }
+=======
+// Re-export all actions from their respective modules
+// This maintains the original public API for all consumers
+
+export * from './actions/auth'
+export * from './actions/agents'
+export * from './actions/calls'
+export * from './actions/reservations'
+export * from './actions/forms'
+export * from './actions/settings'
+>>>>>>> 9376963 (backup: 2025-12-17 22:35:27)

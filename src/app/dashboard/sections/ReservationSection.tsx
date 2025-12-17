@@ -357,7 +357,7 @@ export function ReservationSection({ }: ReservationSectionProps) {
 
     // --- Form Field Handlers ---
     const handleInitDefaults = async () => {
-        if (!confirm('現在の設定がある場合でもデフォルト項目を追加しますか？')) return
+        if (!confirm('不足しているデフォルト項目がある場合、追加しますか？')) return
         setIsFieldsLoading(true)
         try {
             const res = await initializeDefaultFields()
@@ -550,6 +550,18 @@ export function ReservationSection({ }: ReservationSectionProps) {
                                                 <label className="text-xs text-zinc-400">電話番号</label>
                                                 <div className="text-base font-mono text-zinc-700">
                                                     {selectedRequest.customer_phone || selectedRequest.caller_number || '不明'}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-zinc-400">SMS送信ステータス</label>
+                                                <div className="text-base text-zinc-700">
+                                                    {selectedRequest.sms_sent_at ? (
+                                                        <span className="text-green-600 font-medium">
+                                                            送信済み ({formatDate(selectedRequest.sms_sent_at)})
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-zinc-400">未送信</span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -788,158 +800,160 @@ export function ReservationSection({ }: ReservationSectionProps) {
                         </div>
                     )}
                 </>
-            )}
+            )
+            }
 
-            {activeTab === 'settings' && (
-                // --- Notification Settings View ---
-                <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6 md:p-8 space-y-8">
-                    {isSettingsLoading ? (
-                        <div className="flex items-center justify-center h-64">
-                            <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
-                        </div>
-                    ) : (
-                        <div className="space-y-8 max-w-2xl mx-auto">
-                            {/* Email Settings */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
-                                        <Mail className="h-5 w-5 text-indigo-600" />
-                                        通知メール設定
-                                    </h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`text-sm font-medium ${notificationSettings.notify_email_enabled ? 'text-indigo-600' : 'text-zinc-400'}`}>
-                                            {notificationSettings.notify_email_enabled ? '有効' : '無効'}
-                                        </span>
-                                        <button
-                                            onClick={() => setNotificationSettings(p => ({ ...p, notify_email_enabled: !p.notify_email_enabled }))}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationSettings.notify_email_enabled ? 'bg-indigo-600' : 'bg-zinc-200'
-                                                }`}
-                                        >
-                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationSettings.notify_email_enabled ? 'translate-x-6' : 'translate-x-1'
-                                                }`} />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className={`p-4 rounded-xl border transition-colors ${notificationSettings.notify_email_enabled ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-50/50 border-zinc-100 opacity-60'}`}>
-                                    <div className="space-y-4">
-                                        <label className="text-sm font-medium text-zinc-700">通知先メールアドレス</label>
-
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="email"
-                                                value={newEmail}
-                                                onChange={(e) => setNewEmail(e.target.value)}
-                                                placeholder="example@ailuna.net"
-                                                disabled={!notificationSettings.notify_email_enabled}
-                                                className="flex-1 text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-zinc-100"
-                                            />
+            {
+                activeTab === 'settings' && (
+                    // --- Notification Settings View ---
+                    <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6 md:p-8 space-y-8">
+                        {isSettingsLoading ? (
+                            <div className="flex items-center justify-center h-64">
+                                <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
+                            </div>
+                        ) : (
+                            <div className="space-y-8 max-w-2xl mx-auto">
+                                {/* Email Settings */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
+                                            <Mail className="h-5 w-5 text-indigo-600" />
+                                            通知メール設定
+                                        </h3>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-sm font-medium ${notificationSettings.notify_email_enabled ? 'text-indigo-600' : 'text-zinc-400'}`}>
+                                                {notificationSettings.notify_email_enabled ? '有効' : '無効'}
+                                            </span>
                                             <button
-                                                onClick={handleAddEmail}
-                                                disabled={!notificationSettings.notify_email_enabled || !newEmail}
-                                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                                                onClick={() => setNotificationSettings(p => ({ ...p, notify_email_enabled: !p.notify_email_enabled }))}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationSettings.notify_email_enabled ? 'bg-indigo-600' : 'bg-zinc-200'
+                                                    }`}
                                             >
-                                                <Plus className="h-4 w-4" />
+                                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationSettings.notify_email_enabled ? 'translate-x-6' : 'translate-x-1'
+                                                    }`} />
                                             </button>
                                         </div>
-
-                                        <div className="space-y-2">
-                                            {notificationSettings.notify_emails.map((email) => (
-                                                <div key={email} className="flex items-center justify-between p-3 bg-white rounded-lg border border-zinc-200 shadow-sm">
-                                                    <span className="text-sm text-zinc-700">{email}</span>
-                                                    <button
-                                                        onClick={() => handleRemoveEmail(email)}
-                                                        disabled={!notificationSettings.notify_email_enabled}
-                                                        className="text-zinc-400 hover:text-red-600 disabled:opacity-50 transition-colors"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            {notificationSettings.notify_emails.length === 0 && (
-                                                <div className="text-sm text-zinc-400 text-center py-2">
-                                                    メールアドレスが登録されていません
-                                                </div>
-                                            )}
-                                        </div>
                                     </div>
-                                </div>
-                            </div>
 
-                            {/* LINE Settings */}
-                            <div className="space-y-4 pt-4 border-t border-zinc-100">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
-                                        <span className="text-[#06C755] font-bold">LINE</span>
-                                        通知設定
-                                    </h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`text-sm font-medium ${notificationSettings.notify_line_enabled ? 'text-[#06C755]' : 'text-zinc-400'}`}>
-                                            {notificationSettings.notify_line_enabled ? '有効' : '無効'}
-                                        </span>
-                                        <button
-                                            onClick={() => {
-                                                if (!notificationSettings.line_target_id && !notificationSettings.notify_line_enabled) {
-                                                    alert('LINE連携が完了していません。まずは連携を行ってください。')
-                                                    return
-                                                }
-                                                setNotificationSettings(p => ({ ...p, notify_line_enabled: !p.notify_line_enabled }))
-                                            }}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationSettings.notify_line_enabled ? 'bg-[#06C755]' : 'bg-zinc-200'
-                                                }`}
-                                        >
-                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationSettings.notify_line_enabled ? 'translate-x-6' : 'translate-x-1'
-                                                }`} />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="p-6 bg-zinc-50 rounded-xl border border-zinc-200">
-                                    <div className="flex flex-col gap-6">
-                                        {/* Status */}
-                                        <div className="flex items-center justify-between">
-                                            <div className="text-sm font-medium text-zinc-700">連携ステータス</div>
-                                            {notificationSettings.line_target_id ? (
-                                                <div className="flex items-center gap-2 text-[#06C755] font-bold bg-white px-3 py-1 rounded-full border border-[#06C755]/20">
-                                                    <Check className="h-4 w-4" />
-                                                    連携済み (ID: ****{notificationSettings.line_target_id.slice(-4)})
-                                                </div>
-                                            ) : (
-                                                <div className="text-zinc-400 font-medium bg-zinc-200/50 px-3 py-1 rounded-full text-sm">
-                                                    未連携
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Link Code Area */}
+                                    <div className={`p-4 rounded-xl border transition-colors ${notificationSettings.notify_email_enabled ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-50/50 border-zinc-100 opacity-60'}`}>
                                         <div className="space-y-4">
-                                            <div className="text-sm text-zinc-600">
-                                                LINE Botと連携するには、以下のボタンでコードを発行し、LINEで送信してください。
+                                            <label className="text-sm font-medium text-zinc-700">通知先メールアドレス</label>
+
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="email"
+                                                    value={newEmail}
+                                                    onChange={(e) => setNewEmail(e.target.value)}
+                                                    placeholder="example@ailuna.net"
+                                                    disabled={!notificationSettings.notify_email_enabled}
+                                                    className="flex-1 text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-zinc-100"
+                                                />
+                                                <button
+                                                    onClick={handleAddEmail}
+                                                    disabled={!notificationSettings.notify_email_enabled || !newEmail}
+                                                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </button>
                                             </div>
 
-                                            {!linkToken ? (
-                                                <button
-                                                    onClick={handleIssueLinkToken}
-                                                    disabled={isActionLoading}
-                                                    className="w-full sm:w-auto px-4 py-2 bg-white border border-zinc-300 text-zinc-700 font-medium rounded-lg hover:bg-zinc-100 transition-colors shadow-sm flex items-center justify-center gap-2"
-                                                >
-                                                    {isActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                                                    リンクコード発行
-                                                </button>
-                                            ) : (
-                                                <div className="bg-white border border-zinc-200 rounded-lg p-4 space-y-3 animate-in fade-in zoom-in-95">
-                                                    <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">発行されたコード（10分間有効）</label>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="flex-1 text-2xl font-mono font-bold text-center tracking-[0.2em] text-zinc-800 bg-zinc-100 py-2 rounded">
-                                                            {linkToken.code}
-                                                        </div>
+                                            <div className="space-y-2">
+                                                {notificationSettings.notify_emails.map((email) => (
+                                                    <div key={email} className="flex items-center justify-between p-3 bg-white rounded-lg border border-zinc-200 shadow-sm">
+                                                        <span className="text-sm text-zinc-700">{email}</span>
                                                         <button
-                                                            onClick={copyLinkCode}
-                                                            className="p-3 bg-zinc-100 text-zinc-600 rounded hover:bg-zinc-200 transition-colors"
-                                                            title="コピー"
+                                                            onClick={() => handleRemoveEmail(email)}
+                                                            disabled={!notificationSettings.notify_email_enabled}
+                                                            className="text-zinc-400 hover:text-red-600 disabled:opacity-50 transition-colors"
                                                         >
-                                                            {isCopied ? <Check className="h-5 w-5 text-green-600" /> : <Settings className="h-5 w-5 rotate-90" />}
-                                                            {/* Standard copy icon replacement using rotate trick or just text if icon unavailable in imports. 
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                {notificationSettings.notify_emails.length === 0 && (
+                                                    <div className="text-sm text-zinc-400 text-center py-2">
+                                                        メールアドレスが登録されていません
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* LINE Settings */}
+                                <div className="space-y-4 pt-4 border-t border-zinc-100">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
+                                            <span className="text-[#06C755] font-bold">LINE</span>
+                                            通知設定
+                                        </h3>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-sm font-medium ${notificationSettings.notify_line_enabled ? 'text-[#06C755]' : 'text-zinc-400'}`}>
+                                                {notificationSettings.notify_line_enabled ? '有効' : '無効'}
+                                            </span>
+                                            <button
+                                                onClick={() => {
+                                                    if (!notificationSettings.line_target_id && !notificationSettings.notify_line_enabled) {
+                                                        alert('LINE連携が完了していません。まずは連携を行ってください。')
+                                                        return
+                                                    }
+                                                    setNotificationSettings(p => ({ ...p, notify_line_enabled: !p.notify_line_enabled }))
+                                                }}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notificationSettings.notify_line_enabled ? 'bg-[#06C755]' : 'bg-zinc-200'
+                                                    }`}
+                                            >
+                                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationSettings.notify_line_enabled ? 'translate-x-6' : 'translate-x-1'
+                                                    }`} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 bg-zinc-50 rounded-xl border border-zinc-200">
+                                        <div className="flex flex-col gap-6">
+                                            {/* Status */}
+                                            <div className="flex items-center justify-between">
+                                                <div className="text-sm font-medium text-zinc-700">連携ステータス</div>
+                                                {notificationSettings.line_target_id ? (
+                                                    <div className="flex items-center gap-2 text-[#06C755] font-bold bg-white px-3 py-1 rounded-full border border-[#06C755]/20">
+                                                        <Check className="h-4 w-4" />
+                                                        連携済み (ID: ****{notificationSettings.line_target_id.slice(-4)})
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-zinc-400 font-medium bg-zinc-200/50 px-3 py-1 rounded-full text-sm">
+                                                        未連携
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Link Code Area */}
+                                            <div className="space-y-4">
+                                                <div className="text-sm text-zinc-600">
+                                                    LINE Botと連携するには、以下のボタンでコードを発行し、LINEで送信してください。
+                                                </div>
+
+                                                {!linkToken ? (
+                                                    <button
+                                                        onClick={handleIssueLinkToken}
+                                                        disabled={isActionLoading}
+                                                        className="w-full sm:w-auto px-4 py-2 bg-white border border-zinc-300 text-zinc-700 font-medium rounded-lg hover:bg-zinc-100 transition-colors shadow-sm flex items-center justify-center gap-2"
+                                                    >
+                                                        {isActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                                                        リンクコード発行
+                                                    </button>
+                                                ) : (
+                                                    <div className="bg-white border border-zinc-200 rounded-lg p-4 space-y-3 animate-in fade-in zoom-in-95">
+                                                        <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">発行されたコード（10分間有効）</label>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex-1 text-2xl font-mono font-bold text-center tracking-[0.2em] text-zinc-800 bg-zinc-100 py-2 rounded">
+                                                                {linkToken.code}
+                                                            </div>
+                                                            <button
+                                                                onClick={copyLinkCode}
+                                                                className="p-3 bg-zinc-100 text-zinc-600 rounded hover:bg-zinc-200 transition-colors"
+                                                                title="コピー"
+                                                            >
+                                                                {isCopied ? <Check className="h-5 w-5 text-green-600" /> : <Settings className="h-5 w-5 rotate-90" />}
+                                                                {/* Standard copy icon replacement using rotate trick or just text if icon unavailable in imports. 
                                                                 Actually I have Settings, check existing imports. 
                                                                 Imports: Calendar, Filter, ChevronLeft, ChevronRight, Loader2, X, Check, ArrowLeft, Settings, Mail, Plus, Trash2, List, GripVertical, ArrowUp, ArrowDown 
                                                                 I can import Copy if I want, or perform a Quick Fix. 
@@ -947,329 +961,332 @@ export function ReservationSection({ }: ReservationSectionProps) {
                                                                 For now, I'll use a simple icon I have or just text.
                                                                 Wait, I can just add Copy to imports in next step.
                                                                 I'll use 'Settings' for now as placeholder or just text.*/}
-                                                        </button>
+                                                            </button>
+                                                        </div>
+                                                        <div className="text-xs text-zinc-500 space-y-1">
+                                                            <p>1. LINEでBotを開いてください</p>
+                                                            <p>2. 上記のコードを含めて <span className="font-mono bg-zinc-100 px-1 rounded">link {linkToken.code}</span> と送信してください</p>
+                                                            <p>3. 送信後、<button onClick={loadSettings} className="text-indigo-600 underline">再読み込み</button>して連携状態を確認してください</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-xs text-zinc-500 space-y-1">
-                                                        <p>1. LINEでBotを開いてください</p>
-                                                        <p>2. 上記のコードを含めて <span className="font-mono bg-zinc-100 px-1 rounded">link {linkToken.code}</span> と送信してください</p>
-                                                        <p>3. 送信後、<button onClick={loadSettings} className="text-indigo-600 underline">再読み込み</button>して連携状態を確認してください</p>
-                                                    </div>
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Save Button */}
-                            <div className="pt-6 border-t border-zinc-100 flex justify-end">
-                                <button
-                                    onClick={handleSaveSettings}
-                                    disabled={isSavingSettings}
-                                    className="bg-zinc-900 hover:bg-zinc-800 text-white px-8 py-3 rounded-lg font-bold shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
-                                >
-                                    {isSavingSettings && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    設定を保存する
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {activeTab === 'form' && (
-                // --- Form Field Settings View ---
-                <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6 md:p-8 space-y-8">
-                    {isFieldsLoading ? (
-                        <div className="flex items-center justify-center h-64">
-                            <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
-                        </div>
-                    ) : (
-                        <div className="max-w-4xl mx-auto space-y-6">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-bold text-zinc-900">
-                                    予約フォーム質問項目
-                                </h3>
-                                <div className="flex gap-2">
+                                {/* Save Button */}
+                                <div className="pt-6 border-t border-zinc-100 flex justify-end">
                                     <button
-                                        onClick={handleInitDefaults}
-                                        className="text-xs sm:text-sm px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg transition-colors"
+                                        onClick={handleSaveSettings}
+                                        disabled={isSavingSettings}
+                                        className="bg-zinc-900 hover:bg-zinc-800 text-white px-8 py-3 rounded-lg font-bold shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
                                     >
-                                        デフォルト項目追加
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setEditBuffer({
-                                                enabled: true,
-                                                required: false,
-                                                field_type: 'text'
-                                            })
-                                            setShowCreateForm(true)
-                                            setEditingFieldId(null)
-                                        }}
-                                        className="text-xs sm:text-sm px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-sm flex items-center gap-2"
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        新規追加
+                                        {isSavingSettings && <Loader2 className="h-4 w-4 animate-spin" />}
+                                        設定を保存する
                                     </button>
                                 </div>
                             </div>
+                        )}
+                    </div>
+                )
+            }
 
-                            {formFields.length === 0 ? (
-                                <div className="py-12 text-center bg-zinc-50 rounded-xl border border-dashed border-zinc-300">
-                                    <p className="text-zinc-400 mb-4">質問項目が設定されていません</p>
-                                    <button
-                                        onClick={handleInitDefaults}
-                                        className="text-indigo-600 font-medium hover:underline text-sm"
-                                    >
-                                        デフォルト項目テンプレートを読み込む
-                                    </button>
+            {
+                activeTab === 'form' && (
+                    // --- Form Field Settings View ---
+                    <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6 md:p-8 space-y-8">
+                        {isFieldsLoading ? (
+                            <div className="flex items-center justify-center h-64">
+                                <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
+                            </div>
+                        ) : (
+                            <div className="max-w-4xl mx-auto space-y-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-lg font-bold text-zinc-900">
+                                        予約フォーム質問項目
+                                    </h3>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleInitDefaults}
+                                            className="text-xs sm:text-sm px-3 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg transition-colors"
+                                        >
+                                            デフォルト項目追加
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setEditBuffer({
+                                                    enabled: true,
+                                                    required: false,
+                                                    field_type: 'text'
+                                                })
+                                                setShowCreateForm(true)
+                                                setEditingFieldId(null)
+                                            }}
+                                            className="text-xs sm:text-sm px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-sm flex items-center gap-2"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            新規追加
+                                        </button>
+                                    </div>
                                 </div>
-                            ) : (
-                                <ul className="space-y-3">
-                                    {formFields.map((field, index) => {
-                                        const isEditing = editingFieldId === field.id
 
-                                        if (isEditing) {
-                                            return (
-                                                <li key={field.id} className="p-4 bg-zinc-50 border border-indigo-200 rounded-xl shadow-sm ring-1 ring-indigo-100">
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                                        <div>
-                                                            <label className="text-xs text-zinc-500 font-medium ml-1">ラベル (表示名)</label>
-                                                            <input
-                                                                value={editBuffer.label || ''}
-                                                                onChange={(e) => setEditBuffer({ ...editBuffer, label: e.target.value })}
-                                                                className="w-full text-sm border-zinc-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                                                                placeholder="例: アレルギー有無"
-                                                            />
+                                {formFields.length === 0 ? (
+                                    <div className="py-12 text-center bg-zinc-50 rounded-xl border border-dashed border-zinc-300">
+                                        <p className="text-zinc-400 mb-4">質問項目が設定されていません</p>
+                                        <button
+                                            onClick={handleInitDefaults}
+                                            className="text-indigo-600 font-medium hover:underline text-sm"
+                                        >
+                                            デフォルト項目テンプレートを読み込む
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <ul className="space-y-3">
+                                        {formFields.map((field, index) => {
+                                            const isEditing = editingFieldId === field.id
+
+                                            if (isEditing) {
+                                                return (
+                                                    <li key={field.id} className="p-4 bg-zinc-50 border border-indigo-200 rounded-xl shadow-sm ring-1 ring-indigo-100">
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                                            <div>
+                                                                <label className="text-xs text-zinc-500 font-medium ml-1">ラベル (表示名)</label>
+                                                                <input
+                                                                    value={editBuffer.label || ''}
+                                                                    onChange={(e) => setEditBuffer({ ...editBuffer, label: e.target.value })}
+                                                                    className="w-full text-sm border-zinc-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                                                    placeholder="例: アレルギー有無"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-xs text-zinc-500 font-medium ml-1">キー (システム用)</label>
+                                                                <input
+                                                                    value={editBuffer.field_key || ''}
+                                                                    onChange={(e) => setEditBuffer({ ...editBuffer, field_key: e.target.value })}
+                                                                    className="w-full text-sm border-zinc-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 font-mono text-xs"
+                                                                    placeholder="例: allergy"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-xs text-zinc-500 font-medium ml-1">タイプ</label>
+                                                                <select
+                                                                    value={editBuffer.field_type || 'text'}
+                                                                    onChange={(e) => setEditBuffer({ ...editBuffer, field_type: e.target.value as ReservationFieldType })}
+                                                                    className="w-full text-sm border-zinc-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                                                >
+                                                                    <option value="text">テキスト (1行)</option>
+                                                                    <option value="multiline">テキスト (複数行)</option>
+                                                                    <option value="number">数値</option>
+                                                                    <option value="date">日付</option>
+                                                                    <option value="time">時間</option>
+                                                                    <option value="select">選択リスト</option>
+                                                                </select>
+                                                            </div>
+                                                            <div className="flex items-center gap-6 pt-6">
+                                                                <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={editBuffer.required || false}
+                                                                        onChange={(e) => setEditBuffer({ ...editBuffer, required: e.target.checked })}
+                                                                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                                                                    />
+                                                                    必須項目
+                                                                </label>
+                                                                <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={editBuffer.enabled !== false}
+                                                                        onChange={(e) => setEditBuffer({ ...editBuffer, enabled: e.target.checked })}
+                                                                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                                                                    />
+                                                                    有効
+                                                                </label>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <label className="text-xs text-zinc-500 font-medium ml-1">キー (システム用)</label>
-                                                            <input
-                                                                value={editBuffer.field_key || ''}
-                                                                onChange={(e) => setEditBuffer({ ...editBuffer, field_key: e.target.value })}
-                                                                className="w-full text-sm border-zinc-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 font-mono text-xs"
-                                                                placeholder="例: allergy"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-xs text-zinc-500 font-medium ml-1">タイプ</label>
-                                                            <select
-                                                                value={editBuffer.field_type || 'text'}
-                                                                onChange={(e) => setEditBuffer({ ...editBuffer, field_type: e.target.value as ReservationFieldType })}
-                                                                className="w-full text-sm border-zinc-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+
+                                                        {editBuffer.field_type === 'select' && (
+                                                            <div className="mb-4">
+                                                                <label className="text-xs text-zinc-500 font-medium ml-1">選択肢 (改行区切り)</label>
+                                                                <textarea
+                                                                    value={Array.isArray(editBuffer.options) ? editBuffer.options.join('\n') : ''}
+                                                                    onChange={(e) => setEditBuffer({ ...editBuffer, options: e.target.value.split('\n').filter(Boolean) })}
+                                                                    className="w-full text-sm border-zinc-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 h-24"
+                                                                    placeholder="選択肢1&#13;&#10;選択肢2&#13;&#10;選択肢3"
+                                                                />
+                                                            </div>
+                                                        )}
+
+                                                        <div className="flex justify-end gap-2">
+                                                            <button
+                                                                onClick={handleCancelEdit}
+                                                                className="px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 rounded-lg"
                                                             >
-                                                                <option value="text">テキスト (1行)</option>
-                                                                <option value="multiline">テキスト (複数行)</option>
-                                                                <option value="number">数値</option>
-                                                                <option value="date">日付</option>
-                                                                <option value="time">時間</option>
-                                                                <option value="select">選択リスト</option>
-                                                            </select>
+                                                                キャンセル
+                                                            </button>
+                                                            <button
+                                                                onClick={handleSaveEdit}
+                                                                className="px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+                                                            >
+                                                                保存
+                                                            </button>
                                                         </div>
-                                                        <div className="flex items-center gap-6 pt-6">
-                                                            <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={editBuffer.required || false}
-                                                                    onChange={(e) => setEditBuffer({ ...editBuffer, required: e.target.checked })}
-                                                                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                                                                />
-                                                                必須項目
-                                                            </label>
-                                                            <label className="flex items-center gap-2 text-sm text-zinc-700 cursor-pointer">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={editBuffer.enabled !== false}
-                                                                    onChange={(e) => setEditBuffer({ ...editBuffer, enabled: e.target.checked })}
-                                                                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                                                                />
-                                                                有効
-                                                            </label>
+                                                    </li>
+                                                )
+                                            }
+
+                                            return (
+                                                <li key={field.id} className="group p-4 bg-white border border-zinc-200 rounded-xl hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-4 flex-1">
+                                                        <div className="flex flex-col gap-1 text-zinc-300">
+                                                            <button
+                                                                onClick={() => handleMoveField(index, 'up')}
+                                                                disabled={index === 0}
+                                                                className="hover:text-zinc-600 disabled:opacity-30 p-1"
+                                                            >
+                                                                <ArrowUp className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleMoveField(index, 'down')}
+                                                                disabled={index === formFields.length - 1}
+                                                                className="hover:text-zinc-600 disabled:opacity-30 p-1"
+                                                            >
+                                                                <ArrowDown className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="font-bold text-zinc-800">{field.label}</span>
+                                                                {!field.enabled && <span className="text-xs bg-zinc-100 text-zinc-400 px-2 py-0.5 rounded">無効</span>}
+                                                                {field.required && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded font-medium">必須</span>}
+                                                            </div>
+                                                            <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono">
+                                                                <span>KEY: {field.field_key}</span>
+                                                                <span className="w-px h-3 bg-zinc-300" />
+                                                                <span>TYPE: {field.field_type}</span>
+                                                            </div>
                                                         </div>
                                                     </div>
 
-                                                    {editBuffer.field_type === 'select' && (
-                                                        <div className="mb-4">
-                                                            <label className="text-xs text-zinc-500 font-medium ml-1">選択肢 (改行区切り)</label>
-                                                            <textarea
-                                                                value={Array.isArray(editBuffer.options) ? editBuffer.options.join('\n') : ''}
-                                                                onChange={(e) => setEditBuffer({ ...editBuffer, options: e.target.value.split('\n').filter(Boolean) })}
-                                                                className="w-full text-sm border-zinc-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 h-24"
-                                                                placeholder="選択肢1&#13;&#10;選択肢2&#13;&#10;選択肢3"
-                                                            />
-                                                        </div>
-                                                    )}
-
-                                                    <div className="flex justify-end gap-2">
+                                                    <div className="flex items-center gap-2 justify-end sm:opacity-50 group-hover:opacity-100 transition-opacity">
                                                         <button
-                                                            onClick={handleCancelEdit}
-                                                            className="px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100 rounded-lg"
+                                                            onClick={() => handleStartEdit(field)}
+                                                            className="p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 rounded-lg"
+                                                            title="編集"
                                                         >
-                                                            キャンセル
+                                                            <Settings className="h-4 w-4" />
                                                         </button>
                                                         <button
-                                                            onClick={handleSaveEdit}
-                                                            className="px-4 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+                                                            onClick={() => handleDeleteField(field.id)}
+                                                            className="p-2 text-zinc-500 hover:bg-red-50 hover:text-red-600 rounded-lg"
+                                                            title="削除"
                                                         >
-                                                            保存
+                                                            <Trash2 className="h-4 w-4" />
                                                         </button>
                                                     </div>
                                                 </li>
                                             )
-                                        }
+                                        })}
+                                    </ul>
+                                )}
 
-                                        return (
-                                            <li key={field.id} className="group p-4 bg-white border border-zinc-200 rounded-xl hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                <div className="flex items-center gap-4 flex-1">
-                                                    <div className="flex flex-col gap-1 text-zinc-300">
-                                                        <button
-                                                            onClick={() => handleMoveField(index, 'up')}
-                                                            disabled={index === 0}
-                                                            className="hover:text-zinc-600 disabled:opacity-30 p-1"
-                                                        >
-                                                            <ArrowUp className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleMoveField(index, 'down')}
-                                                            disabled={index === formFields.length - 1}
-                                                            className="hover:text-zinc-600 disabled:opacity-30 p-1"
-                                                        >
-                                                            <ArrowDown className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="font-bold text-zinc-800">{field.label}</span>
-                                                            {!field.enabled && <span className="text-xs bg-zinc-100 text-zinc-400 px-2 py-0.5 rounded">無効</span>}
-                                                            {field.required && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded font-medium">必須</span>}
-                                                        </div>
-                                                        <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono">
-                                                            <span>KEY: {field.field_key}</span>
-                                                            <span className="w-px h-3 bg-zinc-300" />
-                                                            <span>TYPE: {field.field_type}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center gap-2 justify-end sm:opacity-50 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => handleStartEdit(field)}
-                                                        className="p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 rounded-lg"
-                                                        title="編集"
-                                                    >
-                                                        <Settings className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteField(field.id)}
-                                                        className="p-2 text-zinc-500 hover:bg-red-50 hover:text-red-600 rounded-lg"
-                                                        title="削除"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            </li>
-                                        )
-                                    })}
-                                </ul>
-                            )}
-
-                            {/* Create Form Modalish inline */}
-                            {showCreateForm && (
-                                <div className="mt-8 p-6 bg-indigo-50 border border-indigo-100 rounded-xl animate-in fade-in slide-in-from-top-4">
-                                    <h4 className="font-bold text-indigo-900 mb-4">新規項目を追加</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label className="text-xs text-indigo-600 font-medium ml-1">ラベル (表示名)</label>
-                                            <input
-                                                value={editBuffer.label || ''}
-                                                onChange={(e) => setEditBuffer({ ...editBuffer, label: e.target.value })}
-                                                className="w-full text-sm border-indigo-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-                                                placeholder="例: 年齢"
-                                            />
+                                {/* Create Form Modalish inline */}
+                                {showCreateForm && (
+                                    <div className="mt-8 p-6 bg-indigo-50 border border-indigo-100 rounded-xl animate-in fade-in slide-in-from-top-4">
+                                        <h4 className="font-bold text-indigo-900 mb-4">新規項目を追加</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="text-xs text-indigo-600 font-medium ml-1">ラベル (表示名)</label>
+                                                <input
+                                                    value={editBuffer.label || ''}
+                                                    onChange={(e) => setEditBuffer({ ...editBuffer, label: e.target.value })}
+                                                    className="w-full text-sm border-indigo-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                                    placeholder="例: 年齢"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-indigo-600 font-medium ml-1">キー (システム用)</label>
+                                                <input
+                                                    value={editBuffer.field_key || ''}
+                                                    onChange={(e) => setEditBuffer({ ...editBuffer, field_key: e.target.value })}
+                                                    className="w-full text-sm border-indigo-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 font-mono text-xs"
+                                                    placeholder="例: age"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-indigo-600 font-medium ml-1">タイプ</label>
+                                                <select
+                                                    value={editBuffer.field_type || 'text'}
+                                                    onChange={(e) => setEditBuffer({ ...editBuffer, field_type: e.target.value as ReservationFieldType })}
+                                                    className="w-full text-sm border-indigo-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                                >
+                                                    <option value="text">テキスト (1行)</option>
+                                                    <option value="multiline">テキスト (複数行)</option>
+                                                    <option value="number">数値</option>
+                                                    <option value="date">日付</option>
+                                                    <option value="time">時間</option>
+                                                    <option value="select">選択リスト</option>
+                                                </select>
+                                            </div>
+                                            <div className="flex items-center gap-6 pt-6">
+                                                <label className="flex items-center gap-2 text-sm text-indigo-900 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={editBuffer.required || false}
+                                                        onChange={(e) => setEditBuffer({ ...editBuffer, required: e.target.checked })}
+                                                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                                                    />
+                                                    必須項目
+                                                </label>
+                                                <label className="flex items-center gap-2 text-sm text-indigo-900 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={editBuffer.enabled !== false}
+                                                        onChange={(e) => setEditBuffer({ ...editBuffer, enabled: e.target.checked })}
+                                                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                                                    />
+                                                    有効
+                                                </label>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="text-xs text-indigo-600 font-medium ml-1">キー (システム用)</label>
-                                            <input
-                                                value={editBuffer.field_key || ''}
-                                                onChange={(e) => setEditBuffer({ ...editBuffer, field_key: e.target.value })}
-                                                className="w-full text-sm border-indigo-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 font-mono text-xs"
-                                                placeholder="例: age"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-indigo-600 font-medium ml-1">タイプ</label>
-                                            <select
-                                                value={editBuffer.field_type || 'text'}
-                                                onChange={(e) => setEditBuffer({ ...editBuffer, field_type: e.target.value as ReservationFieldType })}
-                                                className="w-full text-sm border-indigo-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+
+                                        {editBuffer.field_type === 'select' && (
+                                            <div className="mb-4">
+                                                <label className="text-xs text-indigo-600 font-medium ml-1">選択肢 (改行区切り)</label>
+                                                <textarea
+                                                    value={Array.isArray(editBuffer.options) ? editBuffer.options.join('\n') : ''}
+                                                    onChange={(e) => setEditBuffer({ ...editBuffer, options: e.target.value.split('\n').filter(Boolean) })}
+                                                    className="w-full text-sm border-indigo-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 h-24"
+                                                    placeholder="選択肢1&#13;&#10;選択肢2&#13;&#10;選択肢3"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-end gap-3 mt-6">
+                                            <button
+                                                onClick={() => {
+                                                    setShowCreateForm(false)
+                                                    setEditBuffer({})
+                                                }}
+                                                className="px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"
                                             >
-                                                <option value="text">テキスト (1行)</option>
-                                                <option value="multiline">テキスト (複数行)</option>
-                                                <option value="number">数値</option>
-                                                <option value="date">日付</option>
-                                                <option value="time">時間</option>
-                                                <option value="select">選択リスト</option>
-                                            </select>
-                                        </div>
-                                        <div className="flex items-center gap-6 pt-6">
-                                            <label className="flex items-center gap-2 text-sm text-indigo-900 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={editBuffer.required || false}
-                                                    onChange={(e) => setEditBuffer({ ...editBuffer, required: e.target.checked })}
-                                                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                                                />
-                                                必須項目
-                                            </label>
-                                            <label className="flex items-center gap-2 text-sm text-indigo-900 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={editBuffer.enabled !== false}
-                                                    onChange={(e) => setEditBuffer({ ...editBuffer, enabled: e.target.checked })}
-                                                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                                                />
-                                                有効
-                                            </label>
+                                                キャンセル
+                                            </button>
+                                            <button
+                                                onClick={handleCreateField}
+                                                className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
+                                            >
+                                                作成する
+                                            </button>
                                         </div>
                                     </div>
-
-                                    {editBuffer.field_type === 'select' && (
-                                        <div className="mb-4">
-                                            <label className="text-xs text-indigo-600 font-medium ml-1">選択肢 (改行区切り)</label>
-                                            <textarea
-                                                value={Array.isArray(editBuffer.options) ? editBuffer.options.join('\n') : ''}
-                                                onChange={(e) => setEditBuffer({ ...editBuffer, options: e.target.value.split('\n').filter(Boolean) })}
-                                                className="w-full text-sm border-indigo-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 h-24"
-                                                placeholder="選択肢1&#13;&#10;選択肢2&#13;&#10;選択肢3"
-                                            />
-                                        </div>
-                                    )}
-
-                                    <div className="flex justify-end gap-3 mt-6">
-                                        <button
-                                            onClick={() => {
-                                                setShowCreateForm(false)
-                                                setEditBuffer({})
-                                            }}
-                                            className="px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"
-                                        >
-                                            キャンセル
-                                        </button>
-                                        <button
-                                            onClick={handleCreateField}
-                                            className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
-                                        >
-                                            作成する
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )
+            }
+        </div >
     )
 }
