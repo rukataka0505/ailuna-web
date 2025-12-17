@@ -37,8 +37,22 @@ try {
     console.log(`Committing with message: "${message}"...`);
     runCommand(`git commit -m "${message}"`);
 
-    console.log('Pushing to origin main...');
-    runCommand('git push origin main');
+    const branch = execSync('git branch --show-current').toString().trim();
+    if (!branch) {
+        console.error('Error: Could not determine current branch (detached HEAD?). Aborting push.');
+        process.exit(1);
+    }
+
+    console.log(`Pushing to origin ${branch}...`);
+    // Check if remote origin exists to be safe
+    try {
+        execSync('git remote get-url origin', { stdio: 'ignore' });
+    } catch (e) {
+        console.error('Error: Remote "origin" not found.');
+        process.exit(1);
+    }
+
+    runCommand(`git push -u origin ${branch}`);
 
     console.log('Backup completed successfully!');
 } catch (error) {
