@@ -23,6 +23,10 @@ function getFormattedDate() {
 console.log('Starting backup...');
 
 try {
+    // Generate code summary
+    console.log('Generating code summary...');
+    execSync('npm run summary', { stdio: 'inherit' });
+
     // Check for changes
     const status = execSync('git status --porcelain').toString();
     if (!status) {

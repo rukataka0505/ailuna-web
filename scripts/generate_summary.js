@@ -4,7 +4,7 @@ const path = require('path');
 const rootDir = path.resolve(__dirname, '..'); // web directory
 const projectRoot = path.resolve(rootDir, '..'); // AiLuna-1.0 directory
 const srcDir = path.join(rootDir, 'src');
-const outputFile = path.join(projectRoot, 'project_code_summary.txt');
+const outputFile = path.join(rootDir, 'project_code_summary.txt');
 
 const targetExtensions = ['.ts', '.tsx', '.css', '.sql'];
 const excludeDirs = ['node_modules', '.next', 'dist'];
