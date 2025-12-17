@@ -1251,22 +1251,28 @@ File: web/src/app/dashboard/actions/index.ts
 // Re-export all actions from individual modules
 // This maintains backwards compatibility with imports from '../actions'
 
+// Agent settings
 export {
-    fetchReservationRequestsPaginated,
-    approveReservationRequest,
-    rejectReservationRequest,
-    type ReservationStatus,
-    type ReservationFilterParams,
-} from './reservations'
+    saveAgentSettings,
+    deleteAgentSettings,
+} from './agents'
 
+// Authentication
 export {
-    getStoreNotificationSettings,
-    upsertStoreNotificationSettings,
-    createLineLinkToken,
-    getActiveLineLinkToken,
-    type StoreNotificationSettings,
-} from './settings'
+    signOut,
+    fetchUserProfile,
+} from './auth'
 
+// Call logs
+export {
+    fetchUniqueCallerNumbers,
+    fetchCallLogsPaginated,
+    fetchCallMetrics,
+    type FilterParams,
+    type CallMetrics,
+} from './calls'
+
+// Reservation form fields
 export {
     listReservationFields,
     createReservationField,
@@ -1277,6 +1283,24 @@ export {
     type ReservationField,
     type ReservationFieldType,
 } from './forms'
+
+// Reservations
+export {
+    fetchReservationRequestsPaginated,
+    approveReservationRequest,
+    rejectReservationRequest,
+    type ReservationStatus,
+    type ReservationFilterParams,
+} from './reservations'
+
+// Store notification settings
+export {
+    getStoreNotificationSettings,
+    upsertStoreNotificationSettings,
+    createLineLinkToken,
+    getActiveLineLinkToken,
+    type StoreNotificationSettings,
+} from './settings'
 
 ---
 ---
