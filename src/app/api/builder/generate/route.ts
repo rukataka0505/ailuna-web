@@ -24,7 +24,15 @@ const ConfigSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        const { messages } = await req.json()
+        const body = await req.json()
+        const { messages } = body
+
+        if (!Array.isArray(messages)) {
+            return NextResponse.json(
+                { error: 'Invalid messages format' },
+                { status: 400 }
+            )
+        }
 
         if (!process.env.OPENAI_API_KEY) {
             return NextResponse.json(
@@ -37,17 +45,22 @@ export async function POST(req: Request) {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
+        if (!user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            )
+        }
+
         let existingSettings: { system_prompt: string | null; config_metadata: any } | null = null
 
-        if (user) {
-            const { data } = await supabase
-                .from('user_prompts')
-                .select('system_prompt, config_metadata')
-                .eq('user_id', user.id)
-                .single()
+        const { data } = await supabase
+            .from('user_prompts')
+            .select('system_prompt, config_metadata')
+            .eq('user_id', user.id)
+            .single()
 
-            existingSettings = data
-        }
+        existingSettings = data
 
         // Build system prompt using the prompts module
         const systemPrompt = buildConfigBuilderSystemPrompt(existingSettings)

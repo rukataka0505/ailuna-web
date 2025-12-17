@@ -3,6 +3,8 @@ import OpenAI from 'openai'
 import { CONFIG_PARSER_SYSTEM_PROMPT } from '@/lib/prompts/configParser'
 import { z } from 'zod'
 
+import { createClient } from '@/utils/supabase/server'
+
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 })
@@ -13,6 +15,16 @@ const parseSchema = z.object({
 
 export async function POST(req: Request) {
     try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            )
+        }
+
         const body = await req.json()
         const { system_prompt } = parseSchema.parse(body)
 
