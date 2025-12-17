@@ -178,24 +178,30 @@ export function ReservationSection({ }: ReservationSectionProps) {
     const formatReservationDateTime = (req: any) => {
         let dateStr = ''
         if (req.requested_date) {
+            // date type should be YYYY-MM-DD but could be anything if DB is loose
             const parts = req.requested_date.split('-')
             if (parts.length === 3) {
                 dateStr = `${Number(parts[1])}/${Number(parts[2])}`
             } else {
+                // If not standard YYYY-MM-DD, try to just show it if it looks reasonable, or ignore
                 dateStr = req.requested_date
             }
         }
 
         let timeStr = ''
         if (req.requested_time) {
-            timeStr = req.requested_time.substring(0, 5)
+            // HH:mm:ss -> HH:mm
+            // Check if it really has colons or is just a string
+            if (req.requested_time.includes(':')) {
+                timeStr = req.requested_time.substring(0, 5)
+            } else {
+                timeStr = req.requested_time
+            }
         }
 
         if (dateStr && timeStr) return `${dateStr} ${timeStr}`
         if (dateStr) return dateStr
-        // If structured data is missing, we rely on the text preview in the UI below, so just return nothing or a fallback here?
-        // Actually the UI calls this function. If empty, maybe returns ''?
-        // Let's keep returning a fallback if completely empty, but the prompt says formatReservationDateTime is kept.
+        // Fallback
         return '未指定'
     }
 
@@ -221,15 +227,47 @@ export function ReservationSection({ }: ReservationSectionProps) {
         )
     }
 
+    const normalizeAnswers = (answers: any): Record<string, string> => {
+        if (!answers) return {}
+        if (!Array.isArray(answers) && typeof answers === 'object') {
+            return answers as Record<string, string>
+        }
+        if (Array.isArray(answers)) {
+            const result: Record<string, string> = {}
+            answers.forEach(item => {
+                if (typeof item === 'object' && item !== null) {
+                    const key = item.field_key || item.label || item.question || `field_${Math.random().toString(36).substr(2, 9)}`
+                    const value = item.answer || item.value || item.text || item.content || ''
+                    result[key] = String(value)
+                } else {
+                    result[`item_${Math.random()}`] = String(item)
+                }
+            })
+            return result
+        }
+        return {}
+    }
+
     const getAnswerPreview = (req: any) => {
         if (req.requested_datetime_text) return req.requested_datetime_text
 
-        // Fallback to first few answers
-        if (req.answers && typeof req.answers === 'object') {
-            const values = Object.values(req.answers)
-                .filter(v => typeof v === 'string' || typeof v === 'number')
-                .slice(0, 2)
-            if (values.length > 0) return values.join(' / ')
+        // Safe handling for answers (object or array)
+        if (req.answers) {
+            let values: string[] = []
+
+            if (Array.isArray(req.answers)) {
+                // If array, just join strings? or objects?
+                // If invalid array of objects, might need mapping. 
+                // Assuming simple strings or simple objects in array if schema drifted.
+                values = req.answers
+                    .map((a: any) => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
+            } else if (typeof req.answers === 'object') {
+                values = Object.values(req.answers)
+                    .filter(v => typeof v === 'string' || typeof v === 'number')
+                    .map(v => String(v))
+            }
+
+            if (values.length > 0) return values.slice(0, 2).join(' / ')
         }
         return ''
     }
@@ -535,9 +573,7 @@ export function ReservationSection({ }: ReservationSectionProps) {
 
                                             {/* Answers Loop */}
                                             {selectedRequest.answers ? (
-                                                Object.entries(selectedRequest.answers).map(([key, value]) => {
-                                                    // Skip standard keys if already shown? (customer_name, etc might be in answers too, but usually separated in DB columns)
-                                                    // For now show everything in answers except maybe internal ones if any.
+                                                Object.entries(normalizeAnswers(selectedRequest.answers)).map(([key, value]) => {
                                                     if (!value) return null
                                                     return (
                                                         <div key={key}>

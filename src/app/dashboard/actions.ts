@@ -385,6 +385,15 @@ export async function approveReservationRequest(
 
         if (request.customer_phone) {
             await sendSMS(request.customer_phone, body, fromNumber)
+
+            // Log SMS sent status
+            await supabase
+                .from('reservation_requests')
+                .update({
+                    sms_body_sent: body,
+                    sms_sent_at: new Date().toISOString()
+                })
+                .eq('id', id)
         }
     } catch (smsError) {
         console.error('SMS sending failed:', smsError)
@@ -473,6 +482,15 @@ export async function rejectReservationRequest(
 
         if (request.customer_phone) {
             await sendSMS(request.customer_phone, body, fromNumber)
+
+            // Log SMS sent status
+            await supabase
+                .from('reservation_requests')
+                .update({
+                    sms_body_sent: body,
+                    sms_sent_at: new Date().toISOString()
+                })
+                .eq('id', id)
         }
     } catch (smsError) {
         console.error('SMS sending failed:', smsError)
