@@ -284,7 +284,8 @@ export async function fetchReservationRequestsPaginated(
 
 export async function approveReservationRequest(
     id: string,
-    internalNote?: string
+    internalNote?: string,
+    customerMessage?: string
 ) {
     const supabase = await createClient()
     const {
@@ -313,6 +314,7 @@ export async function approveReservationRequest(
             decided_at: new Date().toISOString(),
             decided_by: user.id,
             internal_note: internalNote,
+            customer_message: customerMessage,
         })
         .eq('id', id)
         .eq('user_id', user.id) // Ensure ownership
@@ -354,7 +356,31 @@ export async function approveReservationRequest(
 
         const partySizeStr = request.party_size ? `（人数:${request.party_size}）` : ''
 
-        const body = `ご予約を承りました。${dateTimeDisplay}${partySizeStr}で確定しました。`
+        // Fetch SMS templates
+        const { data: userPrompt } = await supabase
+            .from('user_prompts')
+            .select('config_metadata')
+            .eq('user_id', user.id)
+            .single()
+
+        const templates = (userPrompt?.config_metadata as any)?.sms_templates
+        let body = ''
+
+        if (templates?.approved) {
+            // Use Template
+            body = templates.approved
+                .replace('{{dateTime}}', dateTimeDisplay)
+                .replace('{{partySize}}', partySizeStr)
+                .replace('{{extraMessage}}', customerMessage || '')
+
+            // Cleanup empty placeholders if any remained (optional, but good for cleanliness if easy. Here we just replaced known ones)
+        } else {
+            // Default
+            body = `ご予約を承りました。${dateTimeDisplay}${partySizeStr}で確定しました。`
+            if (customerMessage) {
+                body += `\n\n${customerMessage}`
+            }
+        }
         const fromNumber = profile?.phone_number || undefined
 
         if (request.customer_phone) {
@@ -372,7 +398,8 @@ export async function approveReservationRequest(
 export async function rejectReservationRequest(
     id: string,
     reason: string,
-    internalNote?: string
+    internalNote?: string,
+    customerMessage?: string
 ) {
     const supabase = await createClient()
     const {
@@ -402,6 +429,7 @@ export async function rejectReservationRequest(
             decided_by: user.id,
             decision_reason: reason,
             internal_note: internalNote,
+            customer_message: customerMessage,
         })
         .eq('id', id)
         .eq('user_id', user.id) // Ensure ownership
@@ -419,7 +447,28 @@ export async function rejectReservationRequest(
             .eq('id', user.id)
             .single()
 
-        const body = `申し訳ありません。ご希望の日時はお受けできませんでした。${reason ? '\n' + reason : ''}`
+        // Fetch SMS templates
+        const { data: userPrompt } = await supabase
+            .from('user_prompts')
+            .select('config_metadata')
+            .eq('user_id', user.id)
+            .single()
+
+        const templates = (userPrompt?.config_metadata as any)?.sms_templates
+        let body = ''
+
+        if (templates?.rejected) {
+            // Use Template
+            body = templates.rejected
+                .replace('{{reason}}', reason)
+                .replace('{{extraMessage}}', customerMessage || '')
+        } else {
+            // Default
+            body = `申し訳ありません。ご希望の日時はお受けできませんでした。${reason ? '\n' + reason : ''}`
+            if (customerMessage) {
+                body += `\n\n${customerMessage}`
+            }
+        }
         const fromNumber = profile?.phone_number || undefined
 
         if (request.customer_phone) {

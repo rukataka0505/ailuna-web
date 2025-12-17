@@ -43,6 +43,7 @@ export function ReservationSection({ }: ReservationSectionProps) {
     // For rejection dialog
     const [rejectReason, setRejectReason] = useState('')
     const [internalNote, setInternalNote] = useState('')
+    const [customerMessage, setCustomerMessage] = useState('')
     const [showRejectForm, setShowRejectForm] = useState(false)
 
     // --- Notification Settings State ---
@@ -237,11 +238,12 @@ export function ReservationSection({ }: ReservationSectionProps) {
         if (!confirm('この予約を承認しますか？')) return
         setIsActionLoading(true)
         try {
-            const res = await approveReservationRequest(selectedRequest.id, internalNote)
+            const res = await approveReservationRequest(selectedRequest.id, internalNote, customerMessage)
             if (res?.error) {
                 alert(res.error)
             } else {
                 setSelectedRequest(null)
+                setCustomerMessage('')
                 loadData()
             }
         } catch (err) {
@@ -261,12 +263,13 @@ export function ReservationSection({ }: ReservationSectionProps) {
 
         setIsActionLoading(true)
         try {
-            const res = await rejectReservationRequest(selectedRequest.id, rejectReason, internalNote)
+            const res = await rejectReservationRequest(selectedRequest.id, rejectReason, internalNote, customerMessage)
             if (res?.error) {
                 alert(res.error)
             } else {
                 setShowRejectForm(false)
                 setRejectReason('')
+                setCustomerMessage('')
                 setSelectedRequest(null)
                 loadData()
             }
@@ -480,6 +483,7 @@ export function ReservationSection({ }: ReservationSectionProps) {
                                         setShowRejectForm(false)
                                         setRejectReason('')
                                         setInternalNote('')
+                                        setCustomerMessage('')
                                     }}
                                     className="flex items-center text-sm text-zinc-500 hover:text-zinc-900 mb-4 transition-colors"
                                 >
@@ -569,6 +573,23 @@ export function ReservationSection({ }: ReservationSectionProps) {
                                                 placeholder="承認/却下時に記録を残せます"
                                                 value={internalNote}
                                                 onChange={(e) => setInternalNote(e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="mb-6">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="block text-sm text-zinc-600">顧客へのメッセージ (任意)</label>
+                                                <span className={`text-xs ${customerMessage.length > 200 ? 'text-red-500 font-bold' : 'text-zinc-400'}`}>
+                                                    {customerMessage.length} / 200
+                                                </span>
+                                            </div>
+                                            <textarea
+                                                className={`w-full text-sm border-zinc-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 ${customerMessage.length > 200 ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''}`}
+                                                rows={3}
+                                                placeholder="SMS通知に追記されます（例：お待ちしております）"
+                                                value={customerMessage}
+                                                maxLength={200}
+                                                onChange={(e) => setCustomerMessage(e.target.value)}
                                             />
                                         </div>
 

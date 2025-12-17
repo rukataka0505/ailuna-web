@@ -40,9 +40,14 @@ const BLANK_SETTINGS: AgentSettings = {
     config_metadata: {
         tone: undefined,
         greeting_message: '',
+        reservation_gate_question: '',
         business_description: '',
         rules: [],
-        business_type: ''
+        business_type: '',
+        sms_templates: {
+            approved: 'ご予約を承りました。{{dateTime}}{{partySize}}',
+            rejected: '申し訳ありません。ご希望の日時はお受けできませんでした。{{reason}}'
+        }
     }
 }
 
@@ -540,9 +545,57 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             </div>
 
                             <div className="space-y-2">
-                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">挨拶メッセージ</h4>
-                                <div className="bg-zinc-50 rounded-lg p-3 border border-zinc-100 text-sm text-zinc-700">
-                                    {currentSettings?.config_metadata?.greeting_message}
+                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">基本プロンプト設定</h4>
+                                <div className="space-y-4 bg-zinc-50 rounded-lg p-3 border border-zinc-100">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-zinc-700">第一声 (Greeting)</label>
+                                        <input
+                                            type="text"
+                                            className="w-full text-sm border-zinc-200 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                            value={currentSettings?.config_metadata?.greeting_message || ''}
+                                            onChange={(e) => setCurrentSettings(prev => ({
+                                                ...prev,
+                                                config_metadata: {
+                                                    ...prev.config_metadata,
+                                                    greeting_message: e.target.value
+                                                }
+                                            }))}
+                                            placeholder="お電話ありがとうございます。居酒屋AiLunaです。"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-zinc-700">予約確認の問いかけ (Gate Question)</label>
+                                        <input
+                                            type="text"
+                                            className="w-full text-sm border-zinc-200 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                            value={currentSettings?.config_metadata?.reservation_gate_question || ''}
+                                            onChange={(e) => setCurrentSettings(prev => ({
+                                                ...prev,
+                                                config_metadata: {
+                                                    ...prev.config_metadata,
+                                                    reservation_gate_question: e.target.value
+                                                }
+                                            }))}
+                                            placeholder="ご予約のお電話でしょうか？"
+                                        />
+                                        <p className="text-[10px] text-zinc-400">
+                                            第一声の直後に、予約かどうかを判別するために尋ねる言葉です。
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-zinc-700">非予約時の対応・人格 (System Prompt)</label>
+                                        <textarea
+                                            className="w-full text-sm border-zinc-200 rounded-lg px-3 py-2 min-h-[120px] focus:ring-indigo-500 focus:border-indigo-500"
+                                            value={currentSettings?.system_prompt || ''}
+                                            onChange={(e) => setCurrentSettings(prev => ({ ...prev, system_prompt: e.target.value }))}
+                                            placeholder="あなたは親切な店員です。予約以外の質問（営業時間や場所など）には丁寧に答えてください..."
+                                        />
+                                        <p className="text-[10px] text-zinc-400">
+                                            予約フロー以外でのAIの振る舞いや口調を定義します。
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
@@ -560,6 +613,56 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                         <li className="text-xs text-zinc-400">ルールはまだありません</li>
                                     )}
                                 </ul>
+                            </div>
+
+
+                            <div className="space-y-2">
+                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">SMSテンプレート設定</h4>
+                                <div className="space-y-4 bg-zinc-50 rounded-lg p-3 border border-zinc-100">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-zinc-700">承認時メッセージ</label>
+                                        <textarea
+                                            className="w-full text-xs border-zinc-200 rounded px-2 py-1.5 min-h-[60px] focus:ring-indigo-500 focus:border-indigo-500"
+                                            value={currentSettings?.config_metadata?.sms_templates?.approved || ''}
+                                            onChange={(e) => setCurrentSettings(prev => ({
+                                                ...prev,
+                                                config_metadata: {
+                                                    ...prev.config_metadata,
+                                                    sms_templates: {
+                                                        ...prev.config_metadata.sms_templates,
+                                                        approved: e.target.value,
+                                                        rejected: prev.config_metadata.sms_templates?.rejected || ''
+                                                    }
+                                                }
+                                            }))}
+                                            placeholder="ご予約を承りました。{{dateTime}}{{partySize}}"
+                                        />
+                                        <p className="text-[10px] text-zinc-400">
+                                            利用可能: {'{{dateTime}}'}, {'{{partySize}}'}, {'{{extraMessage}}'}
+                                        </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-zinc-700">却下時メッセージ</label>
+                                        <textarea
+                                            className="w-full text-xs border-zinc-200 rounded px-2 py-1.5 min-h-[60px] focus:ring-indigo-500 focus:border-indigo-500"
+                                            value={currentSettings?.config_metadata?.sms_templates?.rejected || ''}
+                                            onChange={(e) => setCurrentSettings(prev => ({
+                                                ...prev,
+                                                config_metadata: {
+                                                    ...prev.config_metadata,
+                                                    sms_templates: {
+                                                        approved: prev.config_metadata.sms_templates?.approved || '',
+                                                        rejected: e.target.value
+                                                    }
+                                                }
+                                            }))}
+                                            placeholder="申し訳ありません。ご希望の日時はお受けできませんでした。{{reason}}"
+                                        />
+                                        <p className="text-[10px] text-zinc-400">
+                                            利用可能: {'{{reason}}'}, {'{{extraMessage}}'}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     ) : (
@@ -583,6 +686,6 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     )
 }

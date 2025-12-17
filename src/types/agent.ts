@@ -7,12 +7,19 @@ export interface ConfigMetadata {
     tone?: 'polite' | 'friendly' | 'casual'
     /** 電話応対時の第一声の挨拶メッセージ */
     greeting_message: string
+    /** 「ご予約でしょうか？」等の確認メッセージ */
+    reservation_gate_question?: string
     /** ビジネスの説明文（例：「居酒屋のAI電話番」） */
     business_description: string
     /** 電話応対時の重要なルール（箇条書き） */
     rules: string[]
     /** 業種（例：「居酒屋」「美容院」「歯科医院」） */
     business_type?: string
+    /** SMS通知テンプレート */
+    sms_templates?: {
+        approved: string
+        rejected: string
+    }
 }
 
 /**
