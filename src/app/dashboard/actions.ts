@@ -500,7 +500,7 @@ export async function createLineLinkToken() {
             .from('line_link_tokens')
             .insert({
                 user_id: user.id,
-                token_code: tokenCode,
+                token: tokenCode,
                 expires_at: expiresAt
             })
 
@@ -523,7 +523,7 @@ export async function getActiveLineLinkToken() {
 
     const { data, error } = await supabase
         .from('line_link_tokens')
-        .select('token_code, expires_at')
+        .select('token, expires_at')
         .eq('user_id', user.id)
         .is('used_at', null)
         .gt('expires_at', new Date().toISOString())
@@ -533,7 +533,7 @@ export async function getActiveLineLinkToken() {
 
     if (error) return null
 
-    return { token_code: data.token_code, expires_at: data.expires_at }
+    return { token_code: data.token, expires_at: data.expires_at }
 }
 
 export async function upsertStoreNotificationSettings(
