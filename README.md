@@ -107,3 +107,14 @@ Checkoutは作れますが、`profiles.is_subscribed` を更新するには **St
 ## 7. よくあるトラブル
 - `OPENAI_API_KEY` 未設定：Builder関連APIが500
 - `user_prompts` が無い：call-engine 側で DB 設定を読めず、fallback prompt になる
+
+---
+
+## 8. 電話予約フロー安定化 (Acceptance Criteria)
+本リポジトリおよび `ailuna-call-engine` の改修における受け入れ基準です。
+
+1. **Uniqueness**: 1通話 (`call_sid`) につき `reservation_requests` は最大1件のみ作成されること。
+2. **Data Integrity**: `answers` カラムは常に JSON Object `{}` であること（Array `[]` は禁止）。
+3. **Date/Time**: DB上の `requested_date` は `YYYY-MM-DD` (Date型)、`requested_time` は `HH:mm` (Time型) で保存されること。
+4. **Notification**: 店舗への通知 (Email/LINE) は1予約リクエストにつき1回のみ送信されること。
+5. **SMS Logging**: 予約の承認/却下時にSMSが送信された場合、`sms_body_sent` と `sms_sent_at` がデータベースに記録されること。
