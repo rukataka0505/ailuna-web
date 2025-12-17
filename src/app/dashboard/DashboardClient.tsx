@@ -9,7 +9,8 @@ import {
     Phone,
     Menu,
     X,
-    LogOut
+    LogOut,
+    Calendar
 } from 'lucide-react'
 import { UserProfileChip } from '@/components/UserProfileChip'
 import { DashboardSection } from './sections/DashboardSection'
@@ -17,9 +18,10 @@ import { AccountSection } from './sections/AccountSection'
 import { PlanSection } from './sections/PlanSection'
 import { AgentSettingsSection } from './sections/AgentSettingsSection'
 import { CallHistorySection } from './sections/CallHistorySection'
+import { ReservationSection } from './sections/ReservationSection'
 import { DashboardMetricsData } from '@/components/DashboardMetrics'
 
-type Tab = 'dashboard' | 'account' | 'plan' | 'agent' | 'history'
+type Tab = 'dashboard' | 'account' | 'plan' | 'agent' | 'history' | 'reservations'
 
 import { AgentSettings } from '@/types/agent'
 
@@ -51,10 +53,11 @@ export function DashboardClient({
 
     const menuItems = [
         { id: 'dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
+        { id: 'reservations', label: '予約管理', icon: Calendar },
+        { id: 'history', label: '通話履歴', icon: Phone },
+        { id: 'agent', label: 'AIエージェント設定', icon: Settings },
         { id: 'account', label: 'アカウント管理', icon: User },
         { id: 'plan', label: 'プラン・決済', icon: CreditCard },
-        { id: 'agent', label: 'AIエージェント設定', icon: Settings },
-        { id: 'history', label: '通話履歴', icon: Phone },
     ] as const
 
     const renderContent = () => {
@@ -84,6 +87,8 @@ export function DashboardClient({
                         uniqueCallers={uniqueCallers}
                     />
                 )
+            case 'reservations':
+                return <ReservationSection />
             default:
                 return null
         }
