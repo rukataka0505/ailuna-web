@@ -14,6 +14,9 @@ const ConfigSchema = z.object({
     config_metadata: z.object({
         tone_label: z.string().describe('AIの口調（例: 元気な居酒屋店員、落ち着いた受付、フレンドリーなアシスタント）'),
         sample_greeting: z.string().describe('電話に出た時の第一声の挨拶（例: お電話ありがとうございます！〇〇です。）'),
+        reservation_gate_question: z.string().describe('挨拶の直後に聞く、予約かどうかを確認する文言（例: ご予約のお電話でしょうか？）'),
+        sms_approved: z.string().describe('予約承認時のSMSテンプレート（例: ご予約承りました。{{dateTime}}にお待ちしております。）'),
+        sms_rejected: z.string().describe('予約却下時のSMSテンプレート（例: 申し訳ございません。{{reason}}のためお受けできませんでした。）'),
         key_rules: z.array(z.string()).describe('抽出された重要なルールの箇条書き (3〜5個)'),
         business_type: z.string().describe('業種 (例: 居酒屋, 美容院, 歯科医院)'),
     }),
@@ -50,7 +53,7 @@ export async function POST(req: Request) {
         const systemPrompt = buildConfigBuilderSystemPrompt(existingSettings)
 
         const completion = await openai.chat.completions.create({
-            model: process.env.AILUNA_MODEL_MINI || 'gpt-5-mini',
+            model: process.env.AILUNA_MODEL_MINI || 'gpt-4o-mini',
             messages: [
                 { role: 'system', content: systemPrompt },
                 ...messages
@@ -77,6 +80,11 @@ export async function POST(req: Request) {
             config_metadata: {
                 tone,
                 greeting_message: result.config_metadata.sample_greeting,
+                reservation_gate_question: result.config_metadata.reservation_gate_question,
+                sms_templates: {
+                    approved: result.config_metadata.sms_approved,
+                    rejected: result.config_metadata.sms_rejected
+                },
                 business_description: `${result.config_metadata.business_type}のAI電話番`,
                 rules: result.config_metadata.key_rules,
                 business_type: result.config_metadata.business_type
