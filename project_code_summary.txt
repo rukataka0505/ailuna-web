@@ -961,9 +961,10 @@ export async function fetchCallLogsPaginated(
         throw new Error('Unauthorized')
     }
 
+    // 一覧表示に必要なカラムのみ取得（transcriptは展開時に別途取得）
     let query = supabase
         .from('call_logs')
-        .select('*', { count: 'exact' })
+        .select('id, created_at, caller_number, duration_seconds, summary', { count: 'exact' })
         .eq('user_id', user.id)
 
     // フィルター適用
@@ -1018,20 +1019,23 @@ export async function fetchCallMetrics(): Promise<CallMetrics> {
         return { totalCalls: 0, totalDurationMinutes: 0 }
     }
 
-    // 合計利用時間を取得
-    // call_logsテーブルの duration_seconds カラム（秒）を合計し、分単位に変換する
-    // duration_seconds が NULL の場合は 0 として扱う
-    const { data: durationData, error: durationError } = await supabase
-        .from('call_logs')
-        .select('duration_seconds')
-        .eq('user_id', user.id)
+    // 合計利用時間をSQLで計算（スケーラブル）
+    const { data: sumData, error: sumError } = await supabase
+        .rpc('sum_call_duration_seconds', { target_user_id: user.id })
 
     let totalSeconds = 0
-    if (durationError) {
-        console.error('Error fetching call metrics (duration):', durationError)
-        // エラー時は 0 秒として続行
-    } else if (durationData) {
-        totalSeconds = durationData.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0)
+    if (sumError) {
+        console.error('Error fetching call metrics (sum):', sumError)
+        // RPCがない場合はフォールバック
+        const { data: durationData } = await supabase
+            .from('call_logs')
+            .select('duration_seconds')
+            .eq('user_id', user.id)
+        if (durationData) {
+            totalSeconds = durationData.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0)
+        }
+    } else {
+        totalSeconds = sumData || 0
     }
 
     // 秒 -> 分（小数点第1位まで）
@@ -1041,6 +1045,34 @@ export async function fetchCallMetrics(): Promise<CallMetrics> {
         totalCalls: count || 0,
         totalDurationMinutes
     }
+}
+
+/**
+ * 展開時にトランスクリプトを個別取得（遅延ロード）
+ */
+export async function fetchCallTranscript(callId: string): Promise<string | null> {
+    const supabase = await createClient()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+        throw new Error('Unauthorized')
+    }
+
+    const { data, error } = await supabase
+        .from('call_logs')
+        .select('transcript')
+        .eq('id', callId)
+        .eq('user_id', user.id)
+        .single()
+
+    if (error) {
+        console.error('Error fetching call transcript:', error)
+        return null
+    }
+
+    return data?.transcript || null
 }
 
 ---
