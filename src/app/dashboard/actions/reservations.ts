@@ -4,6 +4,16 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendSMS } from '@/utils/twilio'
 
+/**
+ * Check if phone number is in E.164 format (e.g., +81901234567)
+ * Non-E.164 numbers (like demo calls) won't receive SMS
+ */
+function isE164PhoneNumber(phone: string | null | undefined): boolean {
+    if (!phone) return false
+    // E.164: starts with + followed by 7-15 digits
+    return /^\+[1-9]\d{6,14}$/.test(phone)
+}
+
 export type ReservationStatus = 'pending' | 'approved' | 'rejected' | 'auto_approved'
 
 export type ReservationFilterParams = {
@@ -167,6 +177,12 @@ export async function approveReservationRequest(
         }
         const fromNumber = profile?.phone_number || undefined
 
+        // E.164チェック: デモ通話など非E.164の場合はSMS送信をスキップ
+        if (!isE164PhoneNumber(request.customer_phone)) {
+            revalidatePath('/dashboard')
+            return { success: '予約を承認しました（デモ通話のためSMSは送信しません）' }
+        }
+
         if (request.customer_phone && !request.sms_sent_at) {
             await sendSMS(request.customer_phone, body, fromNumber)
 
@@ -273,6 +289,12 @@ export async function rejectReservationRequest(
             }
         }
         const fromNumber = profile?.phone_number || undefined
+
+        // E.164チェック: デモ通話など非E.164の場合はSMS送信をスキップ
+        if (!isE164PhoneNumber(request.customer_phone)) {
+            revalidatePath('/dashboard')
+            return { success: '予約を却下しました（デモ通話のためSMSは送信しません）' }
+        }
 
         if (request.customer_phone && !request.sms_sent_at) {
             await sendSMS(request.customer_phone, body, fromNumber)

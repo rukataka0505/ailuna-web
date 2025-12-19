@@ -68,6 +68,7 @@ export function DashboardClient({
                     onNavigate={setActiveTab}
                     agentSettings={prompts}
                     recentLogs={initialLogs}
+                    userProfile={userProfile}
                 />
             case 'account':
                 return <AccountSection />

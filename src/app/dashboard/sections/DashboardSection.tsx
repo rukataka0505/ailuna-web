@@ -3,16 +3,26 @@
 import { DashboardMetricsView, DashboardMetricsData } from '@/components/DashboardMetrics'
 import { AgentSettings } from '@/types/agent'
 import { Settings, Phone, ChevronRight, Clock } from 'lucide-react'
+import { DemoCallButton } from '@/components/DemoCallButton'
+import { useRouter } from 'next/navigation'
 
 interface DashboardSectionProps {
     metrics: DashboardMetricsData
     onNavigate: (tab: 'agent' | 'history') => void
     agentSettings: AgentSettings
-    recentLogs: any[] // 具体的な型があればそれを使う
+    recentLogs: any[]
+    userProfile?: {
+        phone_number?: string | null
+        account_name?: string | null
+    } | null
 }
 
-export function DashboardSection({ metrics, onNavigate, agentSettings, recentLogs }: DashboardSectionProps) {
+export function DashboardSection({ metrics, onNavigate, agentSettings, recentLogs, userProfile }: DashboardSectionProps) {
+    const router = useRouter()
     const latestLog = recentLogs.length > 0 ? recentLogs[0] : null
+
+    // Demo user detection: no phone number assigned
+    const isDemoUser = !userProfile?.phone_number
 
     // 日付フォーマット用ヘルパー
     const formatDate = (dateString: string) => {
@@ -22,6 +32,21 @@ export function DashboardSection({ metrics, onNavigate, agentSettings, recentLog
 
     return (
         <div className="space-y-8">
+            {/* Demo call button for users without phone number */}
+            {isDemoUser && (
+                <div className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100">
+                    <div className="max-w-md mx-auto space-y-4">
+                        <div className="text-center">
+                            <h2 className="text-lg font-bold text-zinc-900">AIコンシェルジュを体験</h2>
+                            <p className="text-sm text-zinc-600 mt-1">
+                                電話番号なしでも、ブラウザから直接AIと会話できます
+                            </p>
+                        </div>
+                        <DemoCallButton onClick={() => router.push('/dashboard/demo-call')} />
+                    </div>
+                </div>
+            )}
+
             <DashboardMetricsView metrics={metrics} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -464,6 +464,69 @@ export async function POST(request: Request) {
 }
 ---
 ---
+File: web/src/app/api/demo-call/token/route.ts
+import { NextResponse } from 'next/server'
+import { createClient } from '@/utils/supabase/server'
+import { createHmac } from 'crypto'
+
+/**
+ * GET /api/demo-call/token
+ * 
+ * ログインユーザーに対して、HMAC署名付きトークンを発行。
+ * WEB_DEMO_SHARED_SECRET で署名、60秒期限。
+ */
+export async function GET() {
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            )
+        }
+
+        const secret = process.env.WEB_DEMO_SHARED_SECRET
+        const wsUrl = process.env.CALL_ENGINE_WS_URL
+
+        if (!secret || !wsUrl) {
+            console.error('WEB_DEMO_SHARED_SECRET or CALL_ENGINE_WS_URL not configured')
+            return NextResponse.json(
+                { error: 'Service not configured' },
+                { status: 503 }
+            )
+        }
+
+        // 60秒期限
+        const exp = Math.floor(Date.now() / 1000) + 60
+
+        // HMAC署名付きトークン生成
+        const payload = JSON.stringify({ userId: user.id, exp })
+        const signature = createHmac('sha256', secret)
+            .update(payload)
+            .digest('hex')
+
+        // Base64エンコードしたトークン
+        const token = Buffer.from(`${payload}.${signature}`).toString('base64url')
+
+        return NextResponse.json({
+            token,
+            wsUrl: `${wsUrl}/web-demo-media`,
+            userId: user.id
+        })
+
+    } catch (error) {
+        console.error('Demo call token API error:', error)
+        return NextResponse.json(
+            { error: 'Internal Server Error' },
+            { status: 500 }
+        )
+    }
+}
+
+---
+---
 File: web/src/app/api/webhooks/stripe/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
@@ -1343,6 +1406,16 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { sendSMS } from '@/utils/twilio'
 
+/**
+ * Check if phone number is in E.164 format (e.g., +81901234567)
+ * Non-E.164 numbers (like demo calls) won't receive SMS
+ */
+function isE164PhoneNumber(phone: string | null | undefined): boolean {
+    if (!phone) return false
+    // E.164: starts with + followed by 7-15 digits
+    return /^\+[1-9]\d{6,14}$/.test(phone)
+}
+
 export type ReservationStatus = 'pending' | 'approved' | 'rejected' | 'auto_approved'
 
 export type ReservationFilterParams = {
@@ -1506,6 +1579,12 @@ export async function approveReservationRequest(
         }
         const fromNumber = profile?.phone_number || undefined
 
+        // E.164チェック: デモ通話など非E.164の場合はSMS送信をスキップ
+        if (!isE164PhoneNumber(request.customer_phone)) {
+            revalidatePath('/dashboard')
+            return { success: '予約を承認しました（デモ通話のためSMSは送信しません）' }
+        }
+
         if (request.customer_phone && !request.sms_sent_at) {
             await sendSMS(request.customer_phone, body, fromNumber)
 
@@ -1612,6 +1691,12 @@ export async function rejectReservationRequest(
             }
         }
         const fromNumber = profile?.phone_number || undefined
+
+        // E.164チェック: デモ通話など非E.164の場合はSMS送信をスキップ
+        if (!isE164PhoneNumber(request.customer_phone)) {
+            revalidatePath('/dashboard')
+            return { success: '予約を却下しました（デモ通話のためSMSは送信しません）' }
+        }
 
         if (request.customer_phone && !request.sms_sent_at) {
             await sendSMS(request.customer_phone, body, fromNumber)
@@ -2540,6 +2625,7 @@ export function DashboardClient({
                     onNavigate={setActiveTab}
                     agentSettings={prompts}
                     recentLogs={initialLogs}
+                    userProfile={userProfile}
                 />
             case 'account':
                 return <AccountSection />
@@ -2698,6 +2784,296 @@ export function DashboardClient({
 
 ---
 ---
+File: web/src/app/dashboard/demo-call/page.tsx
+'use client'
+
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { Mic, MicOff, PhoneOff, Loader2, ArrowLeft, Calendar, Phone } from 'lucide-react'
+import { WebCallClient, ConnectionStatus } from '@/lib/webCall/webCallClient'
+
+interface TranscriptItem {
+    id: number
+    text: string
+    isFinal: boolean
+    speaker: 'user' | 'ai'
+}
+
+export default function DemoCallPage() {
+    const router = useRouter()
+    const [status, setStatus] = useState<ConnectionStatus>('idle')
+    const [isMuted, setIsMuted] = useState(false)
+    const [transcripts, setTranscripts] = useState<TranscriptItem[]>([])
+    const [error, setError] = useState<string | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
+    const [callEnded, setCallEnded] = useState(false)
+
+    const clientRef = useRef<WebCallClient | null>(null)
+    const transcriptIdRef = useRef(0)
+    const transcriptContainerRef = useRef<HTMLDivElement>(null)
+
+    const handleStatusChange = useCallback((newStatus: ConnectionStatus) => {
+        setStatus(newStatus)
+    }, [])
+
+    const handleTranscript = useCallback((text: string, isFinal: boolean) => {
+        setTranscripts(prev => {
+            const newItem: TranscriptItem = {
+                id: transcriptIdRef.current++,
+                text,
+                isFinal,
+                speaker: 'ai'
+            }
+            return [...prev, newItem].slice(-50)
+        })
+    }, [])
+
+    const handleError = useCallback((errorMessage: string) => {
+        setError(errorMessage)
+    }, [])
+
+    const handleCallEnded = useCallback(() => {
+        setCallEnded(true)
+    }, [])
+
+    // Start call on mount
+    useEffect(() => {
+        const startCall = async () => {
+            setIsLoading(true)
+            setError(null)
+            setTranscripts([])
+
+            try {
+                const response = await fetch('/api/demo-call/token')
+                if (!response.ok) {
+                    const data = await response.json()
+                    throw new Error(data.error || 'トークンの取得に失敗しました')
+                }
+
+                const { token, wsUrl, userId } = await response.json()
+
+                clientRef.current = new WebCallClient({
+                    onStatusChange: handleStatusChange,
+                    onTranscript: handleTranscript,
+                    onError: handleError,
+                    onCallEnded: handleCallEnded
+                })
+
+                await clientRef.current.start(wsUrl, token, userId)
+            } catch (err) {
+                console.error('Failed to start call:', err)
+                setError(err instanceof Error ? err.message : '通話の開始に失敗しました')
+                setStatus('error')
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        startCall()
+
+        return () => {
+            if (clientRef.current) {
+                clientRef.current.stop()
+                clientRef.current = null
+            }
+        }
+    }, [handleStatusChange, handleTranscript, handleError, handleCallEnded])
+
+    // Auto-scroll transcript
+    useEffect(() => {
+        if (transcriptContainerRef.current) {
+            transcriptContainerRef.current.scrollTop = transcriptContainerRef.current.scrollHeight
+        }
+    }, [transcripts])
+
+    const handleMuteToggle = () => {
+        if (clientRef.current) {
+            const newMuteState = clientRef.current.toggleMute()
+            setIsMuted(newMuteState)
+        }
+    }
+
+    const handleEndCall = () => {
+        if (clientRef.current) {
+            clientRef.current.stop()
+        }
+        setCallEnded(true)
+    }
+
+    const getStatusDisplay = () => {
+        switch (status) {
+            case 'connecting':
+                return { text: '接続中...', color: 'text-yellow-500', bg: 'bg-yellow-500/20' }
+            case 'connected':
+                return { text: '通話中', color: 'text-green-500', bg: 'bg-green-500/20' }
+            case 'disconnected':
+                return { text: '終了', color: 'text-zinc-500', bg: 'bg-zinc-500/20' }
+            case 'error':
+                return { text: 'エラー', color: 'text-red-500', bg: 'bg-red-500/20' }
+            default:
+                return { text: '待機中', color: 'text-zinc-400', bg: 'bg-zinc-400/20' }
+        }
+    }
+
+    const statusInfo = getStatusDisplay()
+
+    return (
+        <div className="min-h-screen bg-zinc-900 flex flex-col">
+            {/* Header */}
+            <header className="px-6 py-4 border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm">
+                <div className="max-w-2xl mx-auto flex items-center justify-between">
+                    <button
+                        onClick={() => router.push('/dashboard')}
+                        className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors"
+                    >
+                        <ArrowLeft className="h-5 w-5" />
+                        <span className="text-sm font-medium">ダッシュボードへ戻る</span>
+                    </button>
+
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${statusInfo.bg}`}>
+                        {status === 'connecting' && (
+                            <Loader2 className={`h-3 w-3 animate-spin ${statusInfo.color}`} />
+                        )}
+                        {status === 'connected' && (
+                            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                        )}
+                        <span className={`text-xs font-medium ${statusInfo.color}`}>
+                            {statusInfo.text}
+                        </span>
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Content */}
+            <main className="flex-1 flex flex-col max-w-2xl mx-auto w-full p-6">
+                <div className="text-center mb-6">
+                    <h1 className="text-2xl font-bold text-white mb-2">体験通話</h1>
+                    <p className="text-zinc-400 text-sm">
+                        AIコンシェルジュと会話してみましょう
+                    </p>
+                </div>
+
+                {/* Error message */}
+                {error && (
+                    <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+                        <p className="text-sm text-red-400">{error}</p>
+                    </div>
+                )}
+
+                {/* Transcript area */}
+                <div
+                    ref={transcriptContainerRef}
+                    className="flex-1 min-h-[300px] max-h-[500px] p-4 bg-zinc-800/50 rounded-2xl overflow-y-auto 
+                               border border-zinc-700/50"
+                >
+                    {transcripts.length === 0 ? (
+                        <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
+                            {isLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span>接続しています...</span>
+                                </div>
+                            ) : status === 'connected' ? (
+                                <span>話しかけてみてください...</span>
+                            ) : callEnded ? (
+                                <span>通話が終了しました</span>
+                            ) : (
+                                <span>会話履歴がここに表示されます</span>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {transcripts.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className={`p-3 rounded-xl text-sm ${item.speaker === 'ai'
+                                        ? 'bg-indigo-500/20 text-indigo-100'
+                                        : 'bg-zinc-700/50 text-zinc-200'
+                                        } ${!item.isFinal ? 'opacity-70' : ''}`}
+                                >
+                                    <p>{item.text}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Controls or Post-call navigation */}
+                {!callEnded ? (
+                    <div className="mt-6 flex items-center justify-center gap-6">
+                        {/* Mute button */}
+                        <button
+                            onClick={handleMuteToggle}
+                            disabled={status !== 'connected'}
+                            className={`p-4 rounded-full transition-all duration-200 
+                                       ${isMuted
+                                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                    : 'bg-zinc-700/50 text-white hover:bg-zinc-700'
+                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                            {isMuted ? (
+                                <MicOff className="h-6 w-6" />
+                            ) : (
+                                <Mic className="h-6 w-6" />
+                            )}
+                        </button>
+
+                        {/* End call button */}
+                        <button
+                            onClick={handleEndCall}
+                            className="p-5 bg-red-500 hover:bg-red-600 text-white rounded-full 
+                                       shadow-lg shadow-red-500/30 hover:shadow-red-500/50
+                                       transition-all duration-200 transform hover:scale-105 active:scale-95"
+                        >
+                            <PhoneOff className="h-7 w-7" />
+                        </button>
+                    </div>
+                ) : (
+                    <div className="mt-6 space-y-4">
+                        <p className="text-center text-zinc-400 text-sm mb-4">
+                            通話が終了しました
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <button
+                                onClick={() => router.push('/dashboard?tab=reservations')}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 
+                                           bg-indigo-600 hover:bg-indigo-700 text-white 
+                                           rounded-xl font-medium transition-colors"
+                            >
+                                <Calendar className="h-5 w-5" />
+                                予約管理へ
+                            </button>
+                            <button
+                                onClick={() => router.push('/dashboard?tab=history')}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 
+                                           bg-zinc-700 hover:bg-zinc-600 text-white 
+                                           rounded-xl font-medium transition-colors"
+                            >
+                                <Phone className="h-5 w-5" />
+                                通話ログへ
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Hint text */}
+                <div className="mt-6 text-center">
+                    <p className="text-xs text-zinc-500">
+                        これは体験版です。実際の電話回線は使用しません（PSTN発信ゼロ）
+                    </p>
+                    {isMuted && status === 'connected' && (
+                        <p className="text-xs text-red-400 mt-2">
+                            マイクがミュートされています
+                        </p>
+                    )}
+                </div>
+            </main>
+        </div>
+    )
+}
+
+---
+---
 File: web/src/app/dashboard/page.tsx
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
@@ -2843,16 +3219,26 @@ File: web/src/app/dashboard/sections/DashboardSection.tsx
 import { DashboardMetricsView, DashboardMetricsData } from '@/components/DashboardMetrics'
 import { AgentSettings } from '@/types/agent'
 import { Settings, Phone, ChevronRight, Clock } from 'lucide-react'
+import { DemoCallButton } from '@/components/DemoCallButton'
+import { useRouter } from 'next/navigation'
 
 interface DashboardSectionProps {
     metrics: DashboardMetricsData
     onNavigate: (tab: 'agent' | 'history') => void
     agentSettings: AgentSettings
-    recentLogs: any[] // 具体的な型があればそれを使う
+    recentLogs: any[]
+    userProfile?: {
+        phone_number?: string | null
+        account_name?: string | null
+    } | null
 }
 
-export function DashboardSection({ metrics, onNavigate, agentSettings, recentLogs }: DashboardSectionProps) {
+export function DashboardSection({ metrics, onNavigate, agentSettings, recentLogs, userProfile }: DashboardSectionProps) {
+    const router = useRouter()
     const latestLog = recentLogs.length > 0 ? recentLogs[0] : null
+
+    // Demo user detection: no phone number assigned
+    const isDemoUser = !userProfile?.phone_number
 
     // 日付フォーマット用ヘルパー
     const formatDate = (dateString: string) => {
@@ -2862,6 +3248,21 @@ export function DashboardSection({ metrics, onNavigate, agentSettings, recentLog
 
     return (
         <div className="space-y-8">
+            {/* Demo call button for users without phone number */}
+            {isDemoUser && (
+                <div className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100">
+                    <div className="max-w-md mx-auto space-y-4">
+                        <div className="text-center">
+                            <h2 className="text-lg font-bold text-zinc-900">AIコンシェルジュを体験</h2>
+                            <p className="text-sm text-zinc-600 mt-1">
+                                電話番号なしでも、ブラウザから直接AIと会話できます
+                            </p>
+                        </div>
+                        <DemoCallButton onClick={() => router.push('/dashboard/demo-call')} />
+                    </div>
+                </div>
+            )}
+
             <DashboardMetricsView metrics={metrics} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -5458,9 +5859,10 @@ type CallLog = {
     id: string
     created_at: string
     caller_number: string | null
-    call_sid: string | null
-    transcript: TranscriptItem[] | null
+    call_sid?: string | null
+    transcript?: TranscriptItem[] | null
     summary: string | null
+    duration_seconds?: number | null
 }
 
 interface CallLogListProps {
@@ -5546,7 +5948,7 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
         }
     }
 
-    
+
     const handleLoadMore = async () => {
         setLoading(true)
         try {
@@ -5578,8 +5980,8 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
                     <button
                         onClick={() => setIsFilterOpen(!isFilterOpen)}
                         className={`p-2 rounded-lg transition-colors border border-transparent ${isFilterOpen
-                                ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
-                                : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 hover:border-zinc-200'
+                            ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                            : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 hover:border-zinc-200'
                             }`}
                         title="フィルター"
                     >
@@ -5904,6 +6306,318 @@ export function DashboardMetricsSkeleton() {
 
 ---
 ---
+File: web/src/components/DemoCallButton.tsx
+'use client'
+
+import { Phone } from 'lucide-react'
+
+interface DemoCallButtonProps {
+    onClick: () => void
+    disabled?: boolean
+}
+
+export function DemoCallButton({ onClick, disabled }: DemoCallButtonProps) {
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className="group relative w-full flex items-center justify-center gap-3 px-6 py-4 
+                       bg-gradient-to-r from-indigo-500 to-purple-600 
+                       hover:from-indigo-600 hover:to-purple-700 
+                       disabled:from-zinc-400 disabled:to-zinc-500 disabled:cursor-not-allowed
+                       text-white font-bold text-lg rounded-2xl 
+                       shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40
+                       transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]
+                       overflow-hidden"
+        >
+            {/* Animated background effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 
+                           translate-x-[-100%] group-hover:translate-x-[100%] 
+                           transition-transform duration-700" />
+
+            <div className="relative flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-xl group-hover:scale-110 transition-transform">
+                    <Phone className="h-5 w-5" />
+                </div>
+                <span>試しに電話してみる（体験版）</span>
+            </div>
+
+            {/* Pulse effect */}
+            <div className="absolute inset-0 rounded-2xl animate-pulse-slow bg-white/5" />
+        </button>
+    )
+}
+
+---
+---
+File: web/src/components/DemoCallModal.tsx
+'use client'
+
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { X, Mic, MicOff, PhoneOff, Loader2 } from 'lucide-react'
+import { WebCallClient, ConnectionStatus } from '@/lib/webCall/webCallClient'
+
+interface DemoCallModalProps {
+    isOpen: boolean
+    onClose: () => void
+}
+
+interface TranscriptItem {
+    id: number
+    text: string
+    isFinal: boolean
+    speaker: 'user' | 'ai'
+}
+
+export function DemoCallModal({ isOpen, onClose }: DemoCallModalProps) {
+    const [status, setStatus] = useState<ConnectionStatus>('idle')
+    const [isMuted, setIsMuted] = useState(false)
+    const [transcripts, setTranscripts] = useState<TranscriptItem[]>([])
+    const [error, setError] = useState<string | null>(null)
+    const [isLoading, setIsLoading] = useState(false)
+
+    const clientRef = useRef<WebCallClient | null>(null)
+    const transcriptIdRef = useRef(0)
+    const transcriptContainerRef = useRef<HTMLDivElement>(null)
+
+    const handleStatusChange = useCallback((newStatus: ConnectionStatus) => {
+        setStatus(newStatus)
+    }, [])
+
+    const handleTranscript = useCallback((text: string, isFinal: boolean) => {
+        setTranscripts(prev => {
+            const newItem: TranscriptItem = {
+                id: transcriptIdRef.current++,
+                text,
+                isFinal,
+                speaker: 'ai' // Server-side transcripts are AI responses
+            }
+            // Keep last 50 items
+            const updated = [...prev, newItem].slice(-50)
+            return updated
+        })
+    }, [])
+
+    const handleError = useCallback((errorMessage: string) => {
+        setError(errorMessage)
+    }, [])
+
+    // Start call when modal opens
+    useEffect(() => {
+        if (!isOpen) return
+
+        const startCall = async () => {
+            setIsLoading(true)
+            setError(null)
+            setTranscripts([])
+
+            try {
+                // Fetch token from API
+                const response = await fetch('/api/demo-call/token')
+                if (!response.ok) {
+                    const data = await response.json()
+                    throw new Error(data.error || 'トークンの取得に失敗しました')
+                }
+
+                const { token, wsUrl, userId } = await response.json()
+
+                // Create and start client
+                clientRef.current = new WebCallClient({
+                    onStatusChange: handleStatusChange,
+                    onTranscript: handleTranscript,
+                    onError: handleError
+                })
+
+                await clientRef.current.start(wsUrl, token, userId)
+            } catch (err) {
+                console.error('Failed to start call:', err)
+                setError(err instanceof Error ? err.message : '通話の開始に失敗しました')
+                setStatus('error')
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        startCall()
+
+        return () => {
+            if (clientRef.current) {
+                clientRef.current.stop()
+                clientRef.current = null
+            }
+        }
+    }, [isOpen, handleStatusChange, handleTranscript, handleError])
+
+    // Auto-scroll transcript
+    useEffect(() => {
+        if (transcriptContainerRef.current) {
+            transcriptContainerRef.current.scrollTop = transcriptContainerRef.current.scrollHeight
+        }
+    }, [transcripts])
+
+    const handleMuteToggle = () => {
+        if (clientRef.current) {
+            const newMuteState = clientRef.current.toggleMute()
+            setIsMuted(newMuteState)
+        }
+    }
+
+    const handleEndCall = () => {
+        if (clientRef.current) {
+            clientRef.current.stop()
+        }
+        onClose()
+    }
+
+    if (!isOpen) return null
+
+    const getStatusDisplay = () => {
+        switch (status) {
+            case 'connecting':
+                return { text: '接続中...', color: 'text-yellow-500', bg: 'bg-yellow-500/20' }
+            case 'connected':
+                return { text: '接続済み', color: 'text-green-500', bg: 'bg-green-500/20' }
+            case 'disconnected':
+                return { text: '切断されました', color: 'text-zinc-500', bg: 'bg-zinc-500/20' }
+            case 'error':
+                return { text: 'エラー', color: 'text-red-500', bg: 'bg-red-500/20' }
+            default:
+                return { text: '待機中', color: 'text-zinc-400', bg: 'bg-zinc-400/20' }
+        }
+    }
+
+    const statusInfo = getStatusDisplay()
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                onClick={handleEndCall}
+            />
+
+            {/* Modal */}
+            <div className="relative w-full max-w-md bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden">
+                {/* Header */}
+                <div className="relative px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-bold text-white">体験通話</h2>
+                        <button
+                            onClick={handleEndCall}
+                            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    {/* Status indicator */}
+                    <div className="mt-2 flex items-center gap-2">
+                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${statusInfo.bg}`}>
+                            {status === 'connecting' && (
+                                <Loader2 className={`h-3 w-3 animate-spin ${statusInfo.color}`} />
+                            )}
+                            {status === 'connected' && (
+                                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                            )}
+                            <span className={`text-xs font-medium ${statusInfo.color}`}>
+                                {statusInfo.text}
+                            </span>
+                        </div>
+                        {isMuted && (
+                            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/20 text-red-400">
+                                <MicOff className="h-3 w-3" />
+                                <span className="text-xs">ミュート中</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Error message */}
+                {error && (
+                    <div className="mx-6 mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                        <p className="text-sm text-red-400">{error}</p>
+                    </div>
+                )}
+
+                {/* Transcript area */}
+                <div
+                    ref={transcriptContainerRef}
+                    className="h-64 mx-6 mt-4 p-4 bg-zinc-800/50 rounded-xl overflow-y-auto 
+                               scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
+                >
+                    {transcripts.length === 0 ? (
+                        <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
+                            {isLoading ? (
+                                <div className="flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span>接続しています...</span>
+                                </div>
+                            ) : status === 'connected' ? (
+                                <span>話しかけてみてください...</span>
+                            ) : (
+                                <span>会話履歴がここに表示されます</span>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {transcripts.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className={`p-3 rounded-xl text-sm ${item.speaker === 'ai'
+                                        ? 'bg-indigo-500/20 text-indigo-100'
+                                        : 'bg-zinc-700/50 text-zinc-200'
+                                        } ${!item.isFinal ? 'opacity-70' : ''}`}
+                                >
+                                    <p>{item.text}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Controls */}
+                <div className="p-6 flex items-center justify-center gap-6">
+                    {/* Mute button */}
+                    <button
+                        onClick={handleMuteToggle}
+                        disabled={status !== 'connected'}
+                        className={`p-4 rounded-full transition-all duration-200 
+                                   ${isMuted
+                                ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                : 'bg-zinc-700/50 text-white hover:bg-zinc-700'
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                        {isMuted ? (
+                            <MicOff className="h-6 w-6" />
+                        ) : (
+                            <Mic className="h-6 w-6" />
+                        )}
+                    </button>
+
+                    {/* End call button */}
+                    <button
+                        onClick={handleEndCall}
+                        className="p-5 bg-red-500 hover:bg-red-600 text-white rounded-full 
+                                   shadow-lg shadow-red-500/30 hover:shadow-red-500/50
+                                   transition-all duration-200 transform hover:scale-105 active:scale-95"
+                    >
+                        <PhoneOff className="h-7 w-7" />
+                    </button>
+                </div>
+
+                {/* Hint text */}
+                <div className="px-6 pb-4 text-center">
+                    <p className="text-xs text-zinc-500">
+                        これは体験版です。実際の電話回線は使用しません。
+                    </p>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+---
+---
 File: web/src/components/Footer.tsx
 'use client'
 
@@ -6018,6 +6732,406 @@ export function UserProfileChip({ accountName, phoneNumber, planName = 'Free', c
             </div>
         </div>
     )
+}
+
+---
+---
+File: web/src/lib/audio/audioContext.ts
+/**
+ * AudioContext utilities for microphone access
+ */
+
+let audioContext: AudioContext | null = null
+
+/**
+ * Get or create AudioContext instance
+ */
+export function getAudioContext(): AudioContext {
+    if (!audioContext) {
+        audioContext = new AudioContext()
+    }
+    return audioContext
+}
+
+/**
+ * Resume AudioContext (required after user gesture)
+ */
+export async function resumeAudioContext(): Promise<void> {
+    const ctx = getAudioContext()
+    if (ctx.state === 'suspended') {
+        await ctx.resume()
+    }
+}
+
+/**
+ * Request microphone access and return MediaStream
+ */
+export async function getMicrophoneStream(): Promise<MediaStream> {
+    return navigator.mediaDevices.getUserMedia({
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+        },
+        video: false
+    })
+}
+
+/**
+ * Close AudioContext
+ */
+export function closeAudioContext(): void {
+    if (audioContext) {
+        audioContext.close()
+        audioContext = null
+    }
+}
+
+---
+---
+File: web/src/lib/audio/audioPlayer.ts
+/**
+ * Audio player for received μ-law audio with mark/clear support
+ * Twilio Media Streams compatible
+ */
+
+import { decodeUlaw } from './g711'
+import { int16ToFloat32 } from './resampler'
+import { getAudioContext } from './audioContext'
+
+interface ScheduledBuffer {
+    source: AudioBufferSourceNode
+    startTime: number
+    duration: number
+    markName?: string
+}
+
+export interface AudioPlayerOptions {
+    onMarkPlayed?: (markName: string) => void
+}
+
+export class AudioPlayer {
+    private isPlaying = false
+    private scheduledTime = 0
+    private readonly targetSampleRate = 8000
+    private scheduledBuffers: ScheduledBuffer[] = []
+    private checkInterval: ReturnType<typeof setInterval> | null = null
+    private options: AudioPlayerOptions
+
+    constructor(options: AudioPlayerOptions = {}) {
+        this.options = options
+        this.scheduledTime = 0
+    }
+
+    /**
+     * Play μ-law encoded audio data
+     * @param ulawBase64 Base64 encoded μ-law audio
+     * @param markName Optional mark name to track when this audio completes
+     */
+    playUlawBase64(ulawBase64: string, markName?: string): void {
+        try {
+            // Decode base64 to bytes
+            const binaryString = atob(ulawBase64)
+            const bytes = new Uint8Array(binaryString.length)
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i)
+            }
+
+            // Decode μ-law to linear PCM
+            const pcmInt16 = decodeUlaw(bytes)
+            const pcmFloat32 = int16ToFloat32(pcmInt16)
+
+            // Play audio
+            this.playFloat32(pcmFloat32, markName)
+        } catch (error) {
+            console.error('Error playing audio:', error)
+        }
+    }
+
+    /**
+     * Queue a mark to be returned when current audio completes
+     */
+    queueMark(markName: string): void {
+        const ctx = getAudioContext()
+        // Mark will fire when all currently scheduled audio completes
+        const markBuffer: ScheduledBuffer = {
+            source: ctx.createBufferSource(), // Dummy source, won't be played
+            startTime: this.scheduledTime,
+            duration: 0,
+            markName
+        }
+        this.scheduledBuffers.push(markBuffer)
+        this.startCheckInterval()
+    }
+
+    /**
+     * Clear all scheduled audio immediately (barge-in support)
+     */
+    clear(): void {
+        // Stop all scheduled sources
+        for (const buffer of this.scheduledBuffers) {
+            try {
+                buffer.source.stop()
+            } catch {
+                // Source may not have started yet
+            }
+        }
+        this.scheduledBuffers = []
+
+        // Reset scheduling
+        this.isPlaying = false
+        this.scheduledTime = 0
+
+        // Stop check interval
+        if (this.checkInterval) {
+            clearInterval(this.checkInterval)
+            this.checkInterval = null
+        }
+    }
+
+    /**
+     * Play Float32Array audio samples at 8kHz
+     */
+    private playFloat32(samples: Float32Array, markName?: string): void {
+        const ctx = getAudioContext()
+
+        // Create audio buffer at 8kHz
+        const audioBuffer = ctx.createBuffer(1, samples.length, this.targetSampleRate)
+
+        // Copy samples to the audio buffer channel
+        const channelData = audioBuffer.getChannelData(0)
+        channelData.set(samples)
+
+        // Create buffer source
+        const source = ctx.createBufferSource()
+        source.buffer = audioBuffer
+        source.connect(ctx.destination)
+
+        // Schedule playback
+        if (!this.isPlaying || this.scheduledTime < ctx.currentTime) {
+            this.scheduledTime = ctx.currentTime
+            this.isPlaying = true
+        }
+
+        const startTime = this.scheduledTime
+        source.start(startTime)
+        this.scheduledTime += audioBuffer.duration
+
+        // Track scheduled buffer
+        this.scheduledBuffers.push({
+            source,
+            startTime,
+            duration: audioBuffer.duration,
+            markName
+        })
+
+        // Start checking for completed buffers
+        this.startCheckInterval()
+    }
+
+    private startCheckInterval(): void {
+        if (this.checkInterval) return
+
+        this.checkInterval = setInterval(() => {
+            this.checkCompletedBuffers()
+        }, 50) // Check every 50ms
+    }
+
+    private checkCompletedBuffers(): void {
+        const ctx = getAudioContext()
+        const currentTime = ctx.currentTime
+
+        // Find completed buffers
+        const completed: ScheduledBuffer[] = []
+        this.scheduledBuffers = this.scheduledBuffers.filter(buffer => {
+            const endTime = buffer.startTime + buffer.duration
+            if (currentTime >= endTime) {
+                completed.push(buffer)
+                return false
+            }
+            return true
+        })
+
+        // Fire mark callbacks for completed buffers
+        for (const buffer of completed) {
+            if (buffer.markName && this.options.onMarkPlayed) {
+                this.options.onMarkPlayed(buffer.markName)
+            }
+        }
+
+        // Stop interval if no more buffers
+        if (this.scheduledBuffers.length === 0 && this.checkInterval) {
+            clearInterval(this.checkInterval)
+            this.checkInterval = null
+            this.isPlaying = false
+        }
+    }
+
+    /**
+     * Stop playback and reset state
+     */
+    stop(): void {
+        this.clear()
+    }
+}
+
+---
+---
+File: web/src/lib/audio/g711.ts
+/**
+ * G.711 μ-law (mu-law) codec implementation
+ * Used for telephony audio encoding/decoding
+ */
+
+// μ-law compression parameters
+const ULAW_BIAS = 0x84
+const ULAW_CLIP = 32635
+
+// Segment encoding table
+const SEG_END = [0xFF, 0x1FF, 0x3FF, 0x7FF, 0xFFF, 0x1FFF, 0x3FFF, 0x7FFF]
+
+/**
+ * Encode a single 16-bit linear sample to 8-bit μ-law
+ */
+function linearToUlaw(sample: number): number {
+    let sign = 0
+    let exponent = 0
+    let mantissa = 0
+    let ulawByte = 0
+
+    // Get the sign and magnitude
+    if (sample < 0) {
+        sign = 0x80
+        sample = -sample
+    }
+
+    // Clip the sample
+    if (sample > ULAW_CLIP) {
+        sample = ULAW_CLIP
+    }
+
+    // Add bias
+    sample += ULAW_BIAS
+
+    // Find segment number
+    for (exponent = 0; exponent < 8; exponent++) {
+        if (sample <= SEG_END[exponent]) {
+            break
+        }
+    }
+
+    // Combine sign, segment, and quantization
+    if (exponent >= 8) {
+        ulawByte = 0x7F ^ sign
+    } else {
+        mantissa = (sample >> (exponent + 3)) & 0x0F
+        ulawByte = ~(sign | (exponent << 4) | mantissa) & 0xFF
+    }
+
+    return ulawByte
+}
+
+/**
+ * Decode a single 8-bit μ-law sample to 16-bit linear
+ */
+function ulawToLinear(ulawByte: number): number {
+    // Complement to obtain sign + segment
+    ulawByte = ~ulawByte & 0xFF
+
+    const sign = (ulawByte & 0x80) !== 0
+    const exponent = (ulawByte >> 4) & 0x07
+    const mantissa = ulawByte & 0x0F
+
+    // Compute magnitude
+    let sample = ((mantissa << 3) + ULAW_BIAS) << exponent
+    sample -= ULAW_BIAS
+
+    return sign ? -sample : sample
+}
+
+/**
+ * Encode Int16Array to μ-law encoded Uint8Array
+ */
+export function encodeUlaw(samples: Int16Array): Uint8Array {
+    const output = new Uint8Array(samples.length)
+    for (let i = 0; i < samples.length; i++) {
+        output[i] = linearToUlaw(samples[i])
+    }
+    return output
+}
+
+/**
+ * Decode μ-law encoded Uint8Array to Int16Array
+ */
+export function decodeUlaw(bytes: Uint8Array): Int16Array {
+    const output = new Int16Array(bytes.length)
+    for (let i = 0; i < bytes.length; i++) {
+        output[i] = ulawToLinear(bytes[i])
+    }
+    return output
+}
+
+---
+---
+File: web/src/lib/audio/resampler.ts
+/**
+ * Audio resampling utilities
+ * Resample from browser native sample rate (typically 48kHz) to 8kHz for telephony
+ */
+
+/**
+ * Resample Float32Array audio data from source to target sample rate
+ * Uses linear interpolation for simplicity (MVP)
+ */
+export function resample(
+    inputSamples: Float32Array,
+    inputSampleRate: number,
+    outputSampleRate: number
+): Float32Array {
+    if (inputSampleRate === outputSampleRate) {
+        return inputSamples
+    }
+
+    const ratio = inputSampleRate / outputSampleRate
+    const outputLength = Math.ceil(inputSamples.length / ratio)
+    const output = new Float32Array(outputLength)
+
+    for (let i = 0; i < outputLength; i++) {
+        const srcIndex = i * ratio
+        const srcIndexFloor = Math.floor(srcIndex)
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, inputSamples.length - 1)
+        const fraction = srcIndex - srcIndexFloor
+
+        // Linear interpolation
+        output[i] = inputSamples[srcIndexFloor] * (1 - fraction) +
+            inputSamples[srcIndexCeil] * fraction
+    }
+
+    return output
+}
+
+/**
+ * Convert Float32Array (-1.0 to 1.0) to Int16Array (-32768 to 32767)
+ */
+export function float32ToInt16(samples: Float32Array): Int16Array {
+    const output = new Int16Array(samples.length)
+    for (let i = 0; i < samples.length; i++) {
+        // Clamp to [-1, 1] range
+        const s = Math.max(-1, Math.min(1, samples[i]))
+        output[i] = s < 0 ? s * 0x8000 : s * 0x7FFF
+    }
+    return output
+}
+
+/**
+ * Convert Int16Array to Float32Array
+ */
+export function int16ToFloat32(samples: Int16Array): Float32Array {
+    const output = new Float32Array(samples.length)
+    for (let i = 0; i < samples.length; i++) {
+        output[i] = samples[i] / 0x8000
+    }
+    return output
 }
 
 ---
@@ -6213,6 +7327,340 @@ export const SETUP_CONCIERGE_SYSTEM_PROMPT = `
 - 予約フォームの項目（入力フィールド）を聞き出そうとしないこと。
 - 「予約項目は何にしますか？」と聞かれたら、「予約項目の設定は、この後の『フォーム設定』タブで行えます。ここではAIの話し方やルールを決めましょう」と誘導すること。
 `
+
+---
+---
+File: web/src/lib/webCall/webCallClient.ts
+/**
+ * WebSocket client for browser-based voice calls
+ * Twilio Media Streams compatible
+ */
+
+import { getMicrophoneStream, resumeAudioContext, getAudioContext } from '../audio/audioContext'
+import { resample, float32ToInt16 } from '../audio/resampler'
+import { encodeUlaw } from '../audio/g711'
+import { AudioPlayer } from '../audio/audioPlayer'
+
+export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
+
+export interface WebCallClientOptions {
+    onStatusChange?: (status: ConnectionStatus) => void
+    onTranscript?: (text: string, isFinal: boolean) => void
+    onError?: (error: string) => void
+    onCallEnded?: () => void
+}
+
+/**
+ * Generate a UUID v4
+ */
+function generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0
+        const v = c === 'x' ? r : (r & 0x3) | 0x8
+        return v.toString(16)
+    })
+}
+
+export class WebCallClient {
+    private ws: WebSocket | null = null
+    private mediaStream: MediaStream | null = null
+    private scriptProcessor: ScriptProcessorNode | null = null
+    private audioPlayer: AudioPlayer | null = null
+    private isMuted = false
+    private status: ConnectionStatus = 'idle'
+
+    private readonly sampleRate = 8000
+    private readonly chunkMs = 20
+    private readonly samplesPerChunk: number
+
+    private streamSid: string = ''
+    private callSid: string = ''
+    private options: WebCallClientOptions
+
+    constructor(options: WebCallClientOptions = {}) {
+        this.options = options
+        this.samplesPerChunk = (this.sampleRate * this.chunkMs) / 1000 // 160 samples at 8kHz
+    }
+
+    /**
+     * Start a web call session (Twilio Media Streams compatible)
+     */
+    async start(wsUrl: string, token: string, userId: string): Promise<void> {
+        if (this.status !== 'idle' && this.status !== 'disconnected' && this.status !== 'error') {
+            console.warn('Call already in progress')
+            return
+        }
+
+        this.setStatus('connecting')
+
+        // Generate UUIDs for streamSid and callSid (client-side)
+        this.streamSid = generateUUID()
+        this.callSid = generateUUID()
+
+        try {
+            // Resume AudioContext (required after user gesture)
+            await resumeAudioContext()
+
+            // Request microphone access
+            this.mediaStream = await getMicrophoneStream()
+
+            // Connect to WebSocket with token
+            const wsUrlWithToken = `${wsUrl}?token=${encodeURIComponent(token)}`
+            this.ws = new WebSocket(wsUrlWithToken)
+
+            this.ws.onopen = () => {
+                // Send start event (Twilio Media Streams format)
+                this.ws?.send(JSON.stringify({
+                    event: 'start',
+                    start: {
+                        streamSid: this.streamSid,
+                        callSid: this.callSid,
+                        customParameters: {
+                            userId
+                        }
+                    }
+                }))
+                this.setStatus('connected')
+
+                // Start audio capture
+                this.startAudioCapture()
+            }
+
+            this.ws.onmessage = (event) => {
+                this.handleMessage(event.data)
+            }
+
+            this.ws.onerror = (error) => {
+                console.error('WebSocket error:', error)
+                this.options.onError?.('接続エラーが発生しました')
+                this.setStatus('error')
+            }
+
+            this.ws.onclose = () => {
+                if (this.status === 'connected' || this.status === 'connecting') {
+                    this.setStatus('disconnected')
+                    this.options.onCallEnded?.()
+                }
+                this.cleanup()
+            }
+
+            // Initialize audio player with mark callback
+            this.audioPlayer = new AudioPlayer({
+                onMarkPlayed: (markName) => {
+                    // Send mark back to server when audio completes
+                    this.sendMark(markName)
+                }
+            })
+
+        } catch (error) {
+            console.error('Failed to start call:', error)
+            if (error instanceof DOMException && error.name === 'NotAllowedError') {
+                this.options.onError?.('マイクへのアクセスが許可されていません')
+            } else {
+                this.options.onError?.('通話の開始に失敗しました')
+            }
+            this.setStatus('error')
+            this.cleanup()
+        }
+    }
+
+    /**
+     * End the call
+     */
+    stop(): void {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            // Send stop event (Twilio Media Streams format)
+            this.ws.send(JSON.stringify({
+                event: 'stop',
+                stop: {
+                    streamSid: this.streamSid,
+                    callSid: this.callSid
+                }
+            }))
+            this.ws.close()
+        }
+        this.cleanup()
+        this.setStatus('disconnected')
+        this.options.onCallEnded?.()
+    }
+
+    /**
+     * Toggle mute state
+     */
+    toggleMute(): boolean {
+        this.isMuted = !this.isMuted
+        return this.isMuted
+    }
+
+    /**
+     * Get current mute state
+     */
+    getMuteState(): boolean {
+        return this.isMuted
+    }
+
+    /**
+     * Get current connection status
+     */
+    getStatus(): ConnectionStatus {
+        return this.status
+    }
+
+    /**
+     * Get stream IDs
+     */
+    getStreamInfo(): { streamSid: string; callSid: string } {
+        return { streamSid: this.streamSid, callSid: this.callSid }
+    }
+
+    private setStatus(status: ConnectionStatus): void {
+        this.status = status
+        this.options.onStatusChange?.(status)
+    }
+
+    private sendMark(markName: string): void {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                event: 'mark',
+                mark: {
+                    streamSid: this.streamSid,
+                    name: markName
+                }
+            }))
+        }
+    }
+
+    private handleMessage(data: string): void {
+        try {
+            const message = JSON.parse(data)
+
+            switch (message.event) {
+                case 'media':
+                    // Play received audio (Twilio format: media.payload)
+                    if (message.media?.payload && this.audioPlayer) {
+                        this.audioPlayer.playUlawBase64(message.media.payload)
+                    }
+                    break
+
+                case 'mark':
+                    // Server sent a mark - queue it to be returned when audio completes
+                    if (message.mark?.name && this.audioPlayer) {
+                        this.audioPlayer.queueMark(message.mark.name)
+                    }
+                    break
+
+                case 'clear':
+                    // Clear audio queue (barge-in)
+                    if (this.audioPlayer) {
+                        this.audioPlayer.clear()
+                    }
+                    break
+
+                case 'transcript':
+                    // Handle transcript update (custom extension)
+                    this.options.onTranscript?.(message.text || '', message.isFinal ?? false)
+                    break
+
+                case 'error':
+                    console.error('Server error:', message.message)
+                    this.options.onError?.(message.message || 'サーバーエラーが発生しました')
+                    break
+
+                case 'stop':
+                    // Server requested stop
+                    this.stop()
+                    break
+
+                default:
+                    console.log('Unknown event type:', message.event)
+            }
+        } catch (error) {
+            console.error('Failed to parse message:', error)
+        }
+    }
+
+    private startAudioCapture(): void {
+        if (!this.mediaStream) return
+
+        const ctx = getAudioContext()
+        const source = ctx.createMediaStreamSource(this.mediaStream)
+
+        // Use ScriptProcessorNode for MVP (AudioWorklet would be better but more complex)
+        const bufferSize = 4096
+        this.scriptProcessor = ctx.createScriptProcessor(bufferSize, 1, 1)
+
+        // Accumulator for chunks
+        let accumulatedSamples = new Float32Array(0)
+
+        this.scriptProcessor.onaudioprocess = (event) => {
+            if (this.isMuted || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                return
+            }
+
+            const inputData = event.inputBuffer.getChannelData(0)
+
+            // Resample to 8kHz
+            const resampled = resample(inputData, ctx.sampleRate, this.sampleRate)
+
+            // Accumulate samples
+            const newAccumulated = new Float32Array(accumulatedSamples.length + resampled.length)
+            newAccumulated.set(accumulatedSamples)
+            newAccumulated.set(resampled, accumulatedSamples.length)
+            accumulatedSamples = newAccumulated
+
+            // Send 20ms chunks (160 samples at 8kHz)
+            while (accumulatedSamples.length >= this.samplesPerChunk) {
+                const chunk = accumulatedSamples.slice(0, this.samplesPerChunk)
+                accumulatedSamples = accumulatedSamples.slice(this.samplesPerChunk)
+
+                // Convert to Int16 and encode as μ-law
+                const int16Chunk = float32ToInt16(chunk)
+                const ulawChunk = encodeUlaw(int16Chunk)
+
+                // Convert to base64
+                const base64 = btoa(String.fromCharCode(...ulawChunk))
+
+                // Send media message (Twilio Media Streams format)
+                this.ws?.send(JSON.stringify({
+                    event: 'media',
+                    media: {
+                        streamSid: this.streamSid,
+                        payload: base64
+                    }
+                }))
+            }
+        }
+
+        source.connect(this.scriptProcessor)
+        this.scriptProcessor.connect(ctx.destination) // Required for ScriptProcessorNode to work
+    }
+
+    private cleanup(): void {
+        // Stop audio capture
+        if (this.scriptProcessor) {
+            this.scriptProcessor.disconnect()
+            this.scriptProcessor = null
+        }
+
+        // Stop audio player
+        if (this.audioPlayer) {
+            this.audioPlayer.stop()
+            this.audioPlayer = null
+        }
+
+        // Stop media stream
+        if (this.mediaStream) {
+            this.mediaStream.getTracks().forEach(track => track.stop())
+            this.mediaStream = null
+        }
+
+        // Reset WebSocket
+        this.ws = null
+
+        // Reset mute state
+        this.isMuted = false
+    }
+}
 
 ---
 ---

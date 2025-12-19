@@ -9,9 +9,10 @@ type CallLog = {
     id: string
     created_at: string
     caller_number: string | null
-    call_sid: string | null
-    transcript: TranscriptItem[] | null
+    call_sid?: string | null
+    transcript?: TranscriptItem[] | null
     summary: string | null
+    duration_seconds?: number | null
 }
 
 interface CallLogListProps {
@@ -97,7 +98,7 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
         }
     }
 
-    
+
     const handleLoadMore = async () => {
         setLoading(true)
         try {
@@ -129,8 +130,8 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
                     <button
                         onClick={() => setIsFilterOpen(!isFilterOpen)}
                         className={`p-2 rounded-lg transition-colors border border-transparent ${isFilterOpen
-                                ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
-                                : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 hover:border-zinc-200'
+                            ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                            : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 hover:border-zinc-200'
                             }`}
                         title="フィルター"
                     >
