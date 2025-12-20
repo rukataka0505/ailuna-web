@@ -2817,6 +2817,7 @@ export default function DemoCallPage() {
     const clientRef = useRef<WebCallClient | null>(null)
     const transcriptIdRef = useRef(0)
     const transcriptContainerRef = useRef<HTMLDivElement>(null)
+    const [hasStarted, setHasStarted] = useState(false)
 
     const handleStatusChange = useCallback((newStatus: ConnectionStatus) => {
         setStatus(newStatus)
@@ -2842,48 +2843,48 @@ export default function DemoCallPage() {
         setCallEnded(true)
     }, [])
 
-    // Start call on mount
-    useEffect(() => {
-        const startCall = async () => {
-            setIsLoading(true)
-            setError(null)
-            setTranscripts([])
+    // Start call function - must be called from user gesture for iOS compatibility
+    const startCall = useCallback(async () => {
+        setHasStarted(true)
+        setIsLoading(true)
+        setError(null)
+        setTranscripts([])
 
-            try {
-                const response = await fetch('/api/demo-call/token')
-                if (!response.ok) {
-                    const data = await response.json()
-                    throw new Error(data.error || 'トークンの取得に失敗しました')
-                }
-
-                const { token, wsUrl, userId } = await response.json()
-
-                clientRef.current = new WebCallClient({
-                    onStatusChange: handleStatusChange,
-                    onTranscript: handleTranscript,
-                    onError: handleError,
-                    onCallEnded: handleCallEnded
-                })
-
-                await clientRef.current.start(wsUrl, token, userId)
-            } catch (err) {
-                console.error('Failed to start call:', err)
-                setError(err instanceof Error ? err.message : '通話の開始に失敗しました')
-                setStatus('error')
-            } finally {
-                setIsLoading(false)
+        try {
+            const response = await fetch('/api/demo-call/token')
+            if (!response.ok) {
+                const data = await response.json()
+                throw new Error(data.error || 'トークンの取得に失敗しました')
             }
+
+            const { token, wsUrl, userId } = await response.json()
+
+            clientRef.current = new WebCallClient({
+                onStatusChange: handleStatusChange,
+                onTranscript: handleTranscript,
+                onError: handleError,
+                onCallEnded: handleCallEnded
+            })
+
+            await clientRef.current.start(wsUrl, token, userId)
+        } catch (err) {
+            console.error('Failed to start call:', err)
+            setError(err instanceof Error ? err.message : '通話の開始に失敗しました')
+            setStatus('error')
+        } finally {
+            setIsLoading(false)
         }
+    }, [handleStatusChange, handleTranscript, handleError, handleCallEnded])
 
-        startCall()
-
+    // Cleanup on unmount
+    useEffect(() => {
         return () => {
             if (clientRef.current) {
                 clientRef.current.stop()
                 clientRef.current = null
             }
         }
-    }, [handleStatusChange, handleTranscript, handleError, handleCallEnded])
+    }, [])
 
     // Auto-scroll transcript
     useEffect(() => {
@@ -2974,7 +2975,12 @@ export default function DemoCallPage() {
                 >
                     {transcripts.length === 0 ? (
                         <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
-                            {isLoading ? (
+                            {!hasStarted ? (
+                                <div className="flex flex-col items-center gap-4">
+                                    <Mic className="h-12 w-12 text-zinc-600" />
+                                    <span>下のボタンをタップして通話を開始</span>
+                                </div>
+                            ) : isLoading ? (
                                 <div className="flex items-center gap-2">
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                     <span>接続しています...</span>
@@ -3007,32 +3013,48 @@ export default function DemoCallPage() {
                 {/* Controls or Post-call navigation */}
                 {!callEnded ? (
                     <div className="mt-6 flex items-center justify-center gap-6">
-                        {/* Mute button */}
-                        <button
-                            onClick={handleMuteToggle}
-                            disabled={status !== 'connected'}
-                            className={`p-4 rounded-full transition-all duration-200 
-                                       ${isMuted
-                                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                                    : 'bg-zinc-700/50 text-white hover:bg-zinc-700'
-                                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        >
-                            {isMuted ? (
-                                <MicOff className="h-6 w-6" />
-                            ) : (
+                        {!hasStarted ? (
+                            /* Start call button - requires user gesture for iOS */
+                            <button
+                                onClick={startCall}
+                                className="flex items-center gap-3 px-8 py-4 bg-green-600 hover:bg-green-700 
+                                           text-white rounded-full font-medium text-lg
+                                           shadow-lg shadow-green-500/30 hover:shadow-green-500/50
+                                           transition-all duration-200 transform hover:scale-105 active:scale-95"
+                            >
                                 <Mic className="h-6 w-6" />
-                            )}
-                        </button>
+                                <span>マイクを許可して開始</span>
+                            </button>
+                        ) : (
+                            <>
+                                {/* Mute button */}
+                                <button
+                                    onClick={handleMuteToggle}
+                                    disabled={status !== 'connected'}
+                                    className={`p-4 rounded-full transition-all duration-200 
+                                               ${isMuted
+                                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                            : 'bg-zinc-700/50 text-white hover:bg-zinc-700'
+                                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                >
+                                    {isMuted ? (
+                                        <MicOff className="h-6 w-6" />
+                                    ) : (
+                                        <Mic className="h-6 w-6" />
+                                    )}
+                                </button>
 
-                        {/* End call button */}
-                        <button
-                            onClick={handleEndCall}
-                            className="p-5 bg-red-500 hover:bg-red-600 text-white rounded-full 
-                                       shadow-lg shadow-red-500/30 hover:shadow-red-500/50
-                                       transition-all duration-200 transform hover:scale-105 active:scale-95"
-                        >
-                            <PhoneOff className="h-7 w-7" />
-                        </button>
+                                {/* End call button */}
+                                <button
+                                    onClick={handleEndCall}
+                                    className="p-5 bg-red-500 hover:bg-red-600 text-white rounded-full 
+                                               shadow-lg shadow-red-500/30 hover:shadow-red-500/50
+                                               transition-all duration-200 transform hover:scale-105 active:scale-95"
+                                >
+                                    <PhoneOff className="h-7 w-7" />
+                                </button>
+                            </>
+                        )}
                     </div>
                 ) : (
                     <div className="mt-6 space-y-4">
