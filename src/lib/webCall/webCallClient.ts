@@ -139,8 +139,8 @@ export class WebCallClient {
             // Send stop event (Twilio Media Streams format)
             this.ws.send(JSON.stringify({
                 event: 'stop',
+                streamSid: this.streamSid,
                 stop: {
-                    streamSid: this.streamSid,
                     callSid: this.callSid
                 }
             }))
@@ -189,8 +189,8 @@ export class WebCallClient {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify({
                 event: 'mark',
+                streamSid: this.streamSid,
                 mark: {
-                    streamSid: this.streamSid,
                     name: markName
                 }
             }))
@@ -294,8 +294,8 @@ export class WebCallClient {
                 // Send media message (Twilio Media Streams format)
                 this.ws?.send(JSON.stringify({
                     event: 'media',
+                    streamSid: this.streamSid,
                     media: {
-                        streamSid: this.streamSid,
                         payload: base64
                     }
                 }))
