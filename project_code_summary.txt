@@ -498,17 +498,18 @@ export async function GET() {
             )
         }
 
-        // 60秒期限
-        const exp = Math.floor(Date.now() / 1000) + 60
+        // Generate timestamp (seconds)
+        const timestamp = Math.floor(Date.now() / 1000)
 
-        // HMAC署名付きトークン生成
-        const payload = JSON.stringify({ userId: user.id, exp })
+        // HMAC-SHA256 signature: hmac = HMAC-SHA256(secret, "${timestamp}.${userId}")
+        const dataToSign = `${timestamp}.${user.id}`
         const signature = createHmac('sha256', secret)
-            .update(payload)
+            .update(dataToSign)
             .digest('hex')
 
-        // Base64エンコードしたトークン
-        const token = Buffer.from(`${payload}.${signature}`).toString('base64url')
+        // Token format: base64url("${timestamp}.${userId}.${hmacHex}")
+        const tokenData = `${timestamp}.${user.id}.${signature}`
+        const token = Buffer.from(tokenData).toString('base64url')
 
         return NextResponse.json({
             token,
