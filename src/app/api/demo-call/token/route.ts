@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { createHmac } from 'crypto'
+import { createHmac, createHash } from 'crypto'
 
 /**
  * GET /api/demo-call/token
@@ -31,6 +31,10 @@ export async function GET() {
                 { status: 503 }
             )
         }
+
+        // Debug: log sha256 of secret for cross-service verification (never log the actual secret)
+        const secretHash = createHash('sha256').update(secret, 'utf8').digest('hex')
+        console.log(`WEB_DEMO_SHARED_SECRET sha256=${secretHash} len=${secret.length}`)
 
         // Generate timestamp (seconds)
         const timestamp = Math.floor(Date.now() / 1000)
