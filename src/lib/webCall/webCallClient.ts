@@ -50,7 +50,100 @@ export class WebCallClient {
     }
 
     /**
-     * Start a web call session (Twilio Media Streams compatible)
+     * Start a web call session with an already-acquired MediaStream
+     * This is the preferred method for iOS compatibility - getUserMedia should be called
+     * FIRST in the click handler before any async operations
+     */
+    async startWithStream(
+        stream: MediaStream,
+        wsUrl: string,
+        token: string,
+        userId: string
+    ): Promise<void> {
+        if (this.status !== 'idle' && this.status !== 'disconnected' && this.status !== 'error') {
+            console.warn('[WebCallClient] Call already in progress')
+            return
+        }
+
+        console.log('[WebCallClient] Starting with pre-acquired stream')
+        this.setStatus('connecting')
+
+        // Generate UUIDs for streamSid and callSid (client-side)
+        this.streamSid = generateUUID()
+        this.callSid = generateUUID()
+
+        try {
+            // Use the provided stream
+            this.mediaStream = stream
+
+            // Resume AudioContext (required for audio playback)
+            console.log('[WebCallClient] Resuming AudioContext...')
+            await resumeAudioContext()
+            console.log('[WebCallClient] AudioContext resumed')
+
+            // Connect to WebSocket with token
+            const wsUrlWithToken = `${wsUrl}?token=${encodeURIComponent(token)}`
+            console.log('[WebCallClient] Connecting to WebSocket...')
+            this.ws = new WebSocket(wsUrlWithToken)
+
+            this.ws.onopen = () => {
+                console.log('[WebCallClient] WebSocket connected')
+                // Send start event (Twilio Media Streams format)
+                this.ws?.send(JSON.stringify({
+                    event: 'start',
+                    start: {
+                        streamSid: this.streamSid,
+                        callSid: this.callSid,
+                        customParameters: {
+                            userId
+                        }
+                    }
+                }))
+                this.setStatus('connected')
+
+                // Start audio capture
+                this.startAudioCapture()
+            }
+
+            this.ws.onmessage = (event) => {
+                this.handleMessage(event.data)
+            }
+
+            this.ws.onerror = (error) => {
+                console.error('[WebCallClient] WebSocket error:', error)
+                this.options.onError?.('接続エラーが発生しました')
+                this.setStatus('error')
+            }
+
+            this.ws.onclose = (event) => {
+                console.log('[WebCallClient] WebSocket closed:', event.code, event.reason)
+                if (this.status === 'connected' || this.status === 'connecting') {
+                    this.setStatus('disconnected')
+                    this.options.onCallEnded?.()
+                }
+                this.cleanup()
+            }
+
+            // Initialize audio player with mark callback
+            this.audioPlayer = new AudioPlayer({
+                onMarkPlayed: (markName) => {
+                    // Send mark back to server when audio completes
+                    this.sendMark(markName)
+                }
+            })
+
+        } catch (error) {
+            console.error('[WebCallClient] Failed to start call:', error)
+            this.options.onError?.('通話の開始に失敗しました')
+            this.setStatus('error')
+            this.cleanup()
+        }
+    }
+
+    /**
+     * Start a web call session (legacy method)
+     * WARNING: On iOS, this may fail because getUserMedia is called after async operations,
+     * breaking the user gesture context. Use startWithStream() instead.
      */
     async start(wsUrl: string, token: string, userId: string): Promise<void> {
         if (this.status !== 'idle' && this.status !== 'disconnected' && this.status !== 'error') {

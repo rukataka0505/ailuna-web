@@ -51,21 +51,57 @@ export default function DemoCallPage() {
     }, [])
 
     // Start call function - must be called from user gesture for iOS compatibility
+    // CRITICAL: getUserMedia must be called FIRST, before any async operations
     const startCall = useCallback(async () => {
         setHasStarted(true)
         setIsLoading(true)
         setError(null)
         setTranscripts([])
 
+        let stream: MediaStream | null = null
+
         try {
+            // Step 1: Request microphone FIRST - this MUST be in the synchronous part of the click handler
+            // On iOS, any await before this will break the user gesture context
+            console.log('[DemoCall] Requesting microphone access...')
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                })
+                console.log('[DemoCall] Microphone access granted')
+            } catch (micError) {
+                console.error('[DemoCall] Microphone error:', micError)
+                if (micError instanceof DOMException) {
+                    if (micError.name === 'NotAllowedError') {
+                        throw new Error('マイクへのアクセスが拒否されました。設定からマイクを許可してください。')
+                    } else if (micError.name === 'NotFoundError') {
+                        throw new Error('マイクが見つかりません。マイクが接続されているか確認してください。')
+                    } else if (micError.name === 'NotSupportedError') {
+                        throw new Error('このブラウザはマイクに対応していません。')
+                    } else {
+                        throw new Error(`マイクエラー: ${micError.name} - ${micError.message}`)
+                    }
+                }
+                throw new Error('マイクへのアクセスに失敗しました')
+            }
+
+            // Step 2: Fetch token (after microphone is acquired)
+            console.log('[DemoCall] Fetching token...')
             const response = await fetch('/api/demo-call/token')
             if (!response.ok) {
-                const data = await response.json()
-                throw new Error(data.error || 'トークンの取得に失敗しました')
+                const data = await response.json().catch(() => ({}))
+                console.error('[DemoCall] Token fetch failed:', response.status, data)
+                throw new Error(data.error || `トークンの取得に失敗しました (${response.status})`)
             }
 
             const { token, wsUrl, userId } = await response.json()
+            console.log('[DemoCall] Token received, connecting...')
 
+            // Step 3: Create client and start with the already-acquired stream
             clientRef.current = new WebCallClient({
                 onStatusChange: handleStatusChange,
                 onTranscript: handleTranscript,
@@ -73,11 +109,18 @@ export default function DemoCallPage() {
                 onCallEnded: handleCallEnded
             })
 
-            await clientRef.current.start(wsUrl, token, userId)
+            await clientRef.current.startWithStream(stream, wsUrl, token, userId)
+            console.log('[DemoCall] Call started successfully')
+
         } catch (err) {
-            console.error('Failed to start call:', err)
+            console.error('[DemoCall] Failed to start call:', err)
             setError(err instanceof Error ? err.message : '通話の開始に失敗しました')
             setStatus('error')
+
+            // Clean up stream if we acquired it but failed later
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop())
+            }
         } finally {
             setIsLoading(false)
         }

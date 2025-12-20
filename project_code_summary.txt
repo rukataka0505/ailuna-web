@@ -2844,21 +2844,57 @@ export default function DemoCallPage() {
     }, [])
 
     // Start call function - must be called from user gesture for iOS compatibility
+    // CRITICAL: getUserMedia must be called FIRST, before any async operations
     const startCall = useCallback(async () => {
         setHasStarted(true)
         setIsLoading(true)
         setError(null)
         setTranscripts([])
 
+        let stream: MediaStream | null = null
+
         try {
+            // Step 1: Request microphone FIRST - this MUST be in the synchronous part of the click handler
+            // On iOS, any await before this will break the user gesture context
+            console.log('[DemoCall] Requesting microphone access...')
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                })
+                console.log('[DemoCall] Microphone access granted')
+            } catch (micError) {
+                console.error('[DemoCall] Microphone error:', micError)
+                if (micError instanceof DOMException) {
+                    if (micError.name === 'NotAllowedError') {
+                        throw new Error('マイクへのアクセスが拒否されました。設定からマイクを許可してください。')
+                    } else if (micError.name === 'NotFoundError') {
+                        throw new Error('マイクが見つかりません。マイクが接続されているか確認してください。')
+                    } else if (micError.name === 'NotSupportedError') {
+                        throw new Error('このブラウザはマイクに対応していません。')
+                    } else {
+                        throw new Error(`マイクエラー: ${micError.name} - ${micError.message}`)
+                    }
+                }
+                throw new Error('マイクへのアクセスに失敗しました')
+            }
+
+            // Step 2: Fetch token (after microphone is acquired)
+            console.log('[DemoCall] Fetching token...')
             const response = await fetch('/api/demo-call/token')
             if (!response.ok) {
-                const data = await response.json()
-                throw new Error(data.error || 'トークンの取得に失敗しました')
+                const data = await response.json().catch(() => ({}))
+                console.error('[DemoCall] Token fetch failed:', response.status, data)
+                throw new Error(data.error || `トークンの取得に失敗しました (${response.status})`)
             }
 
             const { token, wsUrl, userId } = await response.json()
+            console.log('[DemoCall] Token received, connecting...')
 
+            // Step 3: Create client and start with the already-acquired stream
             clientRef.current = new WebCallClient({
                 onStatusChange: handleStatusChange,
                 onTranscript: handleTranscript,
@@ -2866,11 +2902,18 @@ export default function DemoCallPage() {
                 onCallEnded: handleCallEnded
             })
 
-            await clientRef.current.start(wsUrl, token, userId)
+            await clientRef.current.startWithStream(stream, wsUrl, token, userId)
+            console.log('[DemoCall] Call started successfully')
+
         } catch (err) {
-            console.error('Failed to start call:', err)
+            console.error('[DemoCall] Failed to start call:', err)
             setError(err instanceof Error ? err.message : '通話の開始に失敗しました')
             setStatus('error')
+
+            // Clean up stream if we acquired it but failed later
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop())
+            }
         } finally {
             setIsLoading(false)
         }
@@ -7409,7 +7452,100 @@ export class WebCallClient {
     }
 
     /**
-     * Start a web call session (Twilio Media Streams compatible)
+     * Start a web call session with an already-acquired MediaStream
+     * This is the preferred method for iOS compatibility - getUserMedia should be called
+     * FIRST in the click handler before any async operations
+     */
+    async startWithStream(
+        stream: MediaStream,
+        wsUrl: string,
+        token: string,
+        userId: string
+    ): Promise<void> {
+        if (this.status !== 'idle' && this.status !== 'disconnected' && this.status !== 'error') {
+            console.warn('[WebCallClient] Call already in progress')
+            return
+        }
+
+        console.log('[WebCallClient] Starting with pre-acquired stream')
+        this.setStatus('connecting')
+
+        // Generate UUIDs for streamSid and callSid (client-side)
+        this.streamSid = generateUUID()
+        this.callSid = generateUUID()
+
+        try {
+            // Use the provided stream
+            this.mediaStream = stream
+
+            // Resume AudioContext (required for audio playback)
+            console.log('[WebCallClient] Resuming AudioContext...')
+            await resumeAudioContext()
+            console.log('[WebCallClient] AudioContext resumed')
+
+            // Connect to WebSocket with token
+            const wsUrlWithToken = `${wsUrl}?token=${encodeURIComponent(token)}`
+            console.log('[WebCallClient] Connecting to WebSocket...')
+            this.ws = new WebSocket(wsUrlWithToken)
+
+            this.ws.onopen = () => {
+                console.log('[WebCallClient] WebSocket connected')
+                // Send start event (Twilio Media Streams format)
+                this.ws?.send(JSON.stringify({
+                    event: 'start',
+                    start: {
+                        streamSid: this.streamSid,
+                        callSid: this.callSid,
+                        customParameters: {
+                            userId
+                        }
+                    }
+                }))
+                this.setStatus('connected')
+
+                // Start audio capture
+                this.startAudioCapture()
+            }
+
+            this.ws.onmessage = (event) => {
+                this.handleMessage(event.data)
+            }
+
+            this.ws.onerror = (error) => {
+                console.error('[WebCallClient] WebSocket error:', error)
+                this.options.onError?.('接続エラーが発生しました')
+                this.setStatus('error')
+            }
+
+            this.ws.onclose = (event) => {
+                console.log('[WebCallClient] WebSocket closed:', event.code, event.reason)
+                if (this.status === 'connected' || this.status === 'connecting') {
+                    this.setStatus('disconnected')
+                    this.options.onCallEnded?.()
+                }
+                this.cleanup()
+            }
+
+            // Initialize audio player with mark callback
+            this.audioPlayer = new AudioPlayer({
+                onMarkPlayed: (markName) => {
+                    // Send mark back to server when audio completes
+                    this.sendMark(markName)
+                }
+            })
+
+        } catch (error) {
+            console.error('[WebCallClient] Failed to start call:', error)
+            this.options.onError?.('通話の開始に失敗しました')
+            this.setStatus('error')
+            this.cleanup()
+        }
+    }
+
+    /**
+     * Start a web call session (legacy method)
+     * WARNING: On iOS, this may fail because getUserMedia is called after async operations,
+     * breaking the user gesture context. Use startWithStream() instead.
      */
     async start(wsUrl: string, token: string, userId: string): Promise<void> {
         if (this.status !== 'idle' && this.status !== 'disconnected' && this.status !== 'error') {
