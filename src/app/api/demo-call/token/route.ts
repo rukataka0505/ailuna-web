@@ -6,7 +6,8 @@ import { createHmac } from 'crypto'
  * GET /api/demo-call/token
  * 
  * ログインユーザーに対して、HMAC署名付きトークンを発行。
- * WEB_DEMO_SHARED_SECRET で署名、60秒期限。
+ * WEB_DEMO_SHARED_SECRET で署名。
+ * トークンに timestamp を埋め込み、期限判定は call-engine 側で行う（デフォルト5分 ±60秒の clock skew 許容）。
  */
 export async function GET() {
     try {

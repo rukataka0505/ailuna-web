@@ -29,13 +29,13 @@ export default function DemoCallPage() {
         setStatus(newStatus)
     }, [])
 
-    const handleTranscript = useCallback((text: string, isFinal: boolean) => {
+    const handleTranscript = useCallback((text: string, isFinal: boolean, speaker: 'user' | 'ai') => {
         setTranscripts(prev => {
             const newItem: TranscriptItem = {
                 id: transcriptIdRef.current++,
                 text,
                 isFinal,
-                speaker: 'ai'
+                speaker
             }
             return [...prev, newItem].slice(-50)
         })

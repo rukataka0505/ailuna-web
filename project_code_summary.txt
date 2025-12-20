@@ -473,7 +473,8 @@ import { createHmac } from 'crypto'
  * GET /api/demo-call/token
  * 
  * ログインユーザーに対して、HMAC署名付きトークンを発行。
- * WEB_DEMO_SHARED_SECRET で署名、60秒期限。
+ * WEB_DEMO_SHARED_SECRET で署名。
+ * トークンに timestamp を埋め込み、期限判定は call-engine 側で行う（デフォルト5分 ±60秒の clock skew 許容）。
  */
 export async function GET() {
     try {
@@ -2817,13 +2818,13 @@ export default function DemoCallPage() {
         setStatus(newStatus)
     }, [])
 
-    const handleTranscript = useCallback((text: string, isFinal: boolean) => {
+    const handleTranscript = useCallback((text: string, isFinal: boolean, speaker: 'user' | 'ai') => {
         setTranscripts(prev => {
             const newItem: TranscriptItem = {
                 id: transcriptIdRef.current++,
                 text,
                 isFinal,
-                speaker: 'ai'
+                speaker
             }
             return [...prev, newItem].slice(-50)
         })
