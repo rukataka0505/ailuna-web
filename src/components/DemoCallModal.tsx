@@ -31,13 +31,13 @@ export function DemoCallModal({ isOpen, onClose }: DemoCallModalProps) {
         setStatus(newStatus)
     }, [])
 
-    const handleTranscript = useCallback((text: string, isFinal: boolean) => {
+    const handleTranscript = useCallback((text: string, isFinal: boolean, speaker: 'user' | 'ai') => {
         setTranscripts(prev => {
             const newItem: TranscriptItem = {
                 id: transcriptIdRef.current++,
                 text,
                 isFinal,
-                speaker: 'ai' // Server-side transcripts are AI responses
+                speaker
             }
             // Keep last 50 items
             const updated = [...prev, newItem].slice(-50)

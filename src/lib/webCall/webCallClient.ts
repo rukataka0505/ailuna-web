@@ -12,7 +12,7 @@ export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'disconnect
 
 export interface WebCallClientOptions {
     onStatusChange?: (status: ConnectionStatus) => void
-    onTranscript?: (text: string, isFinal: boolean) => void
+    onTranscript?: (text: string, isFinal: boolean, speaker: 'user' | 'ai') => void
     onError?: (error: string) => void
     onCallEnded?: () => void
 }
@@ -225,7 +225,11 @@ export class WebCallClient {
 
                 case 'transcript':
                     // Handle transcript update (custom extension)
-                    this.options.onTranscript?.(message.text || '', message.isFinal ?? false)
+                    this.options.onTranscript?.(
+                        message.text || '',
+                        message.isFinal ?? false,
+                        message.speaker === 'user' ? 'user' : 'ai'
+                    )
                     break
 
                 case 'error':

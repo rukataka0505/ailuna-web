@@ -6385,13 +6385,13 @@ export function DemoCallModal({ isOpen, onClose }: DemoCallModalProps) {
         setStatus(newStatus)
     }, [])
 
-    const handleTranscript = useCallback((text: string, isFinal: boolean) => {
+    const handleTranscript = useCallback((text: string, isFinal: boolean, speaker: 'user' | 'ai') => {
         setTranscripts(prev => {
             const newItem: TranscriptItem = {
                 id: transcriptIdRef.current++,
                 text,
                 isFinal,
-                speaker: 'ai' // Server-side transcripts are AI responses
+                speaker
             }
             // Keep last 50 items
             const updated = [...prev, newItem].slice(-50)
@@ -7346,7 +7346,7 @@ export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'disconnect
 
 export interface WebCallClientOptions {
     onStatusChange?: (status: ConnectionStatus) => void
-    onTranscript?: (text: string, isFinal: boolean) => void
+    onTranscript?: (text: string, isFinal: boolean, speaker: 'user' | 'ai') => void
     onError?: (error: string) => void
     onCallEnded?: () => void
 }
@@ -7559,7 +7559,11 @@ export class WebCallClient {
 
                 case 'transcript':
                     // Handle transcript update (custom extension)
-                    this.options.onTranscript?.(message.text || '', message.isFinal ?? false)
+                    this.options.onTranscript?.(
+                        message.text || '',
+                        message.isFinal ?? false,
+                        message.speaker === 'user' ? 'user' : 'ai'
+                    )
                     break
 
                 case 'error':
