@@ -5957,7 +5957,7 @@ export function DemoCallModal({ isOpen, onClose }: DemoCallModalProps) {
                                     <span>接続しています...</span>
                                 </div>
                             ) : status === 'connected' ? (
-                                <span>話しかけてみてください...</span>
+                                <span>お待ちください...</span>
                             ) : (
                                 <span>会話履歴がここに表示されます</span>
                             )}
