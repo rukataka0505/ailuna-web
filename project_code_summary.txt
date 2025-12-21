@@ -1495,7 +1495,7 @@ File: web/src/app/dashboard/ConciergeBuilder.tsx
 
 import { useState, useEffect } from 'react'
 import { AgentSettings, ConfigMetadata } from '@/types/agent'
-import { Save, Loader2, Trash2 } from 'lucide-react'
+import { Save, Loader2, Trash2, Sparkles } from 'lucide-react'
 import { saveAgentSettings, deleteAgentSettings } from './actions'
 
 interface ConciergeBuilderProps {
@@ -1517,9 +1517,44 @@ const BLANK_SETTINGS: AgentSettings = {
     }
 }
 
+/**
+ * デフォルトのプロンプト設定例
+ * 空白の項目にのみ補完される（Smart Merge）
+ */
+const DEFAULT_SETTINGS: AgentSettings = {
+    system_prompt: `## 店舗基本情報
+- 店名: ○○（店舗名を入力）
+- 営業時間: 11:00〜22:00（ラストオーダー 21:30）
+- 定休日: 毎週月曜日
+- 住所: 東京都渋谷区○○1-2-3
+- 電話番号: 03-1234-5678
+
+## よくある質問
+- 駐車場: 近隣にコインパーキングあり
+- 支払い方法: 現金、クレジットカード、電子マネー対応
+- 個室: 4名様用個室あり（要予約）
+
+## 予約以外のお問い合わせ対応
+- 営業時間・定休日のご案内
+- アクセス方法のご案内
+- メニューに関するご質問`,
+    config_metadata: {
+        tone: 'polite',
+        greeting_message: 'お電話ありがとうございます。○○でございます。ご予約のお電話でしょうか？',
+        business_description: '',
+        rules: [],
+        business_type: '飲食店',
+        sms_templates: {
+            approved: '【○○】ご予約を承りました。\n{{dateTime}}\n{{partySize}}\nご来店をお待ちしております。',
+            rejected: '【○○】申し訳ございません。{{reason}}\n別の日時でのご予約をご検討いただけますと幸いです。'
+        }
+    }
+}
+
 export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     const [isSaving, setIsSaving] = useState(false)
     const [isResettingSettings, setIsResettingSettings] = useState(false)
+    const [isApplyingDefaults, setIsApplyingDefaults] = useState(false)
 
     /**
      * 現在の設定（単一）
@@ -1580,6 +1615,52 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
         }
     }
 
+    /**
+     * デフォルト設定を空白の項目にのみ適用（Smart Merge）
+     */
+    const handleApplyDefaults = async () => {
+        if (!window.confirm('空白の項目にプロンプト設定の例文を入力します。\n既に入力済みの値は上書きされません。\n\n続行しますか？')) {
+            return
+        }
+
+        setIsApplyingDefaults(true)
+
+        try {
+            // Smart Merge: 空の値のみデフォルト値で補完
+            const mergedSettings: AgentSettings = {
+                system_prompt: currentSettings.system_prompt?.trim() || DEFAULT_SETTINGS.system_prompt,
+                config_metadata: {
+                    tone: currentSettings.config_metadata?.tone || DEFAULT_SETTINGS.config_metadata.tone,
+                    greeting_message: currentSettings.config_metadata?.greeting_message?.trim() || DEFAULT_SETTINGS.config_metadata.greeting_message,
+                    business_description: currentSettings.config_metadata?.business_description?.trim() || DEFAULT_SETTINGS.config_metadata.business_description,
+                    rules: currentSettings.config_metadata?.rules?.length ? currentSettings.config_metadata.rules : DEFAULT_SETTINGS.config_metadata.rules,
+                    business_type: currentSettings.config_metadata?.business_type?.trim() || DEFAULT_SETTINGS.config_metadata.business_type,
+                    sms_templates: {
+                        approved: currentSettings.config_metadata?.sms_templates?.approved?.trim() || DEFAULT_SETTINGS.config_metadata.sms_templates!.approved,
+                        rejected: currentSettings.config_metadata?.sms_templates?.rejected?.trim() || DEFAULT_SETTINGS.config_metadata.sms_templates!.rejected
+                    }
+                }
+            }
+
+            // DBに保存
+            const result = await saveAgentSettings(mergedSettings.system_prompt, mergedSettings.config_metadata)
+            if (result.error) {
+                alert(result.error)
+                return
+            }
+
+            // UIを更新
+            setCurrentSettings(mergedSettings)
+            setSavedSettings(mergedSettings)
+            alert('デフォルト設定を適用しました！')
+        } catch (error) {
+            console.error('Apply defaults error:', error)
+            alert('デフォルト設定の適用中にエラーが発生しました。')
+        } finally {
+            setIsApplyingDefaults(false)
+        }
+    }
+
     // 変更があるかどうかを判定 (JSON文字列比較)
     const hasChanges = JSON.stringify(currentSettings) !== JSON.stringify(savedSettings)
 
@@ -1605,7 +1686,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             </div>
                             <button
                                 onClick={handleResetSettings}
-                                disabled={isSaving || isResettingSettings || !currentSettings?.system_prompt}
+                                disabled={isSaving || isResettingSettings || isApplyingDefaults || !currentSettings?.system_prompt}
                                 className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                 title=""
                             >
@@ -1613,8 +1694,16 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                             </button>
                         </div>
                         <button
+                            onClick={handleApplyDefaults}
+                            disabled={isSaving || isResettingSettings || isApplyingDefaults}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isApplyingDefaults ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                            デフォルト設定を追加
+                        </button>
+                        <button
                             onClick={handleSave}
-                            disabled={isSaving || !hasChanges}
+                            disabled={isSaving || isApplyingDefaults || !hasChanges}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${!hasChanges
                                 ? 'bg-white text-zinc-400 border border-zinc-200 shadow-sm'
                                 : 'bg-zinc-900 hover:bg-zinc-800 text-white'
