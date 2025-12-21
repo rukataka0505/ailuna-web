@@ -3,7 +3,7 @@
 AiLuna の **SaaS管理画面**（Next.js + Supabase + Stripe）です。
 
 - ログイン/サインアップ（Supabase Auth）
-- AIエージェント設定（対話形式で system prompt を生成 → `user_prompts` に保存）
+- AIエージェント設定（system prompt を手動編集 → `user_prompts` に保存）
 - 通話履歴の表示（`call_logs`）
 - Stripe Checkout でサブスク購入（※Webhook実装が別途必要）
 
@@ -22,12 +22,6 @@ AiLuna の **SaaS管理画面**（Next.js + Supabase + Stripe）です。
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=xxxx
-
-# OpenAI（Builder / parse / generate が利用）
-OPENAI_API_KEY=sk-...
-
-# Builderモデル（任意）
-AILUNA_MODEL_MINI=gpt-5-mini
 
 # Stripe（Checkout）
 STRIPE_SECRET_KEY=sk_test_...
@@ -71,27 +65,15 @@ npm run dev
 
 ## 4. 主要機能
 
-### 4.1 AIエージェント設定（Concierge Builder）
+### 4.1 AIエージェント設定
 - `src/app/dashboard/ConciergeBuilder.tsx`
-- 生成 API：
-  - `POST /api/builder/chat`（会話を進める）
-  - `POST /api/builder/generate`（system_prompt + config_metadata を生成）
-  - `POST /api/builder/parse`（system prompt → Visual表示用に分解）
-
-生成した設定はダッシュボードから **保存**すると、`user_prompts` に保存されます。
+- system_prompt と config_metadata を手動編集し、`user_prompts` に保存します。
 
 ### 4.2 通話履歴
 - `src/components/CallLogList.tsx`
 - サーバアクション：`src/app/dashboard/actions.ts`
 - Supabase の `call_logs` から `user_id` でフィルタして取得します。
 
----
-
-## 5. 重要な注意（セキュリティ/コスト）
-現状の最新コードでは **/api/builder/chat と /api/builder/parse と /api/builder/generate が未ログインでも叩けてしまう**可能性があります。  
-OpenAI API Key を使うため、必ず **ログイン必須（401）** に修正してください。
-
-（Antigravityへの修正指示を別途用意しています）
 
 ---
 
@@ -104,13 +86,12 @@ Checkoutは作れますが、`profiles.is_subscribed` を更新するには **St
 
 ---
 
-## 7. よくあるトラブル
-- `OPENAI_API_KEY` 未設定：Builder関連APIが500
+## 6. よくあるトラブル
 - `user_prompts` が無い：call-engine 側で DB 設定を読めず、fallback prompt になる
 
 ---
 
-## 8. 電話予約フロー安定化 (Acceptance Criteria)
+## 7. 電話予約フロー安定化 (Acceptance Criteria)
 本リポジトリおよび `ailuna-call-engine` の改修における受け入れ基準です。
 
 1. **Uniqueness**: 1通話 (`call_sid`) につき `reservation_requests` は最大1件のみ作成されること。

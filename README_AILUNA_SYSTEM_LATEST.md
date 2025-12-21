@@ -12,7 +12,7 @@
 
 ### Web（ailuna-web）
 - Supabase Auth でログイン
-- 「AIエージェント設定（Concierge Builder）」で **system prompt** を生成して保存（`user_prompts`）
+- 「AIエージェント設定」で **system prompt** を手動編集して保存（`user_prompts`）
 - 通話履歴（`call_logs`）の一覧・全文・要約を確認
 - Stripe Checkout でサブスク購入（※Webhook実装が必要：後述）
 
@@ -68,11 +68,6 @@ sequenceDiagram
   - `transcript jsonb`
   - `summary text`
   - `duration_seconds integer`
-
-### Builderの履歴（任意だが推奨）
-- `concierge_chat_history`
-  - `user_id uuid UNIQUE`
-  - `messages jsonb`
 
 ### 電話番号の自動割当（任意）
 - `phone_number_pool`
@@ -138,10 +133,6 @@ call-engine は TwiML を返し、`/twilio-media` に Stream 接続します。
 - `profiles.is_subscribed` の更新は **Stripe Webhookが必要**
 - 現状の call-engine は「未契約なら throw」しても catch でフォールバックする構造があり、拒否が効かない可能性があります  
   → Antigravity修正指示に含めています。
-
-### Builderが動かない
-- `OPENAI_API_KEY` が web に設定されているか
-- `/api/builder/*` は **ログイン必須にするべき**（現状は未保護のAPIがあり、OpenAIコストが漏れる可能性）
 
 ---
 

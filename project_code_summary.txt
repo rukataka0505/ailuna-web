@@ -1,390 +1,4 @@
 ---
-File: web/src/app/api/builder/chat/route.ts
-import { OpenAI } from 'openai'
-import { NextResponse } from 'next/server'
-import { SETUP_CONCIERGE_SYSTEM_PROMPT } from '@/lib/prompts'
-
-import { createClient } from '@/utils/supabase/server'
-
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-})
-
-export async function POST(req: Request) {
-    try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            )
-        }
-
-        const body = await req.json()
-        const { messages } = body
-
-        if (!Array.isArray(messages)) {
-            return NextResponse.json(
-                { error: 'Invalid messages format' },
-                { status: 400 }
-            )
-        }
-
-        if (!process.env.OPENAI_API_KEY) {
-            return NextResponse.json(
-                { error: 'OpenAI API Key is not configured' },
-                { status: 500 }
-            )
-        }
-
-        const systemPrompt = SETUP_CONCIERGE_SYSTEM_PROMPT
-
-        const response = await openai.chat.completions.create({
-            model: process.env.AILUNA_MODEL_MINI || 'gpt-4o-mini',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                ...messages
-            ],
-        })
-
-        return NextResponse.json({
-            content: response.choices[0].message.content
-        })
-
-    } catch (error) {
-        console.error('Chat API Error:', error)
-        return NextResponse.json(
-            { error: 'Internal Server Error' },
-            { status: 500 }
-        )
-    }
-}
-
----
----
-File: web/src/app/api/builder/generate/route.ts
-import { OpenAI } from 'openai'
-import { NextResponse } from 'next/server'
-import { z } from 'zod'
-import { zodResponseFormat } from 'openai/helpers/zod'
-import { createClient } from '@/utils/supabase/server'
-import { buildConfigBuilderSystemPrompt } from '@/lib/prompts'
-
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-})
-
-const ConfigSchema = z.object({
-    system_prompt: z.string().describe('AI電話番として振る舞うための「あなたは〜です」から始まる完全なシステムプロンプト。挨拶、ビジネス内容、Q&A、ルールなどを統合した詳細な指示書。'),
-    config_metadata: z.object({
-        tone_label: z.string().describe('AIの口調（例: 元気な居酒屋店員、落ち着いた受付、フレンドリーなアシスタント）'),
-        sample_greeting: z.string().describe('電話に出た時の第一声の挨拶（例: お電話ありがとうございます！〇〇です。）'),
-        reservation_gate_question: z.string().describe('挨拶の直後に聞く、予約かどうかを確認する文言（例: ご予約のお電話でしょうか？）'),
-        sms_approved: z.string().describe('予約承認時のSMSテンプレート（例: ご予約承りました。{{dateTime}}にお待ちしております。）'),
-        sms_rejected: z.string().describe('予約却下時のSMSテンプレート（例: 申し訳ございません。{{reason}}のためお受けできませんでした。）'),
-        key_rules: z.array(z.string()).describe('抽出された重要なルールの箇条書き (3〜5個)'),
-        business_type: z.string().describe('業種 (例: 居酒屋, 美容院, 歯科医院)'),
-    }),
-})
-
-export async function POST(req: Request) {
-    try {
-        const body = await req.json()
-        const { messages } = body
-
-        if (!Array.isArray(messages)) {
-            return NextResponse.json(
-                { error: 'Invalid messages format' },
-                { status: 400 }
-            )
-        }
-
-        if (!process.env.OPENAI_API_KEY) {
-            return NextResponse.json(
-                { error: 'OpenAI API Key is not configured' },
-                { status: 500 }
-            )
-        }
-
-        // 既存の設定を取得（差分更新のため）
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            )
-        }
-
-        let existingSettings: { system_prompt: string | null; config_metadata: any } | null = null
-
-        const { data } = await supabase
-            .from('user_prompts')
-            .select('system_prompt, config_metadata')
-            .eq('user_id', user.id)
-            .single()
-
-        existingSettings = data
-
-        // Build system prompt using the prompts module
-        const systemPrompt = buildConfigBuilderSystemPrompt(existingSettings)
-
-        const completion = await openai.chat.completions.create({
-            model: process.env.AILUNA_MODEL_MINI || 'gpt-4o-mini',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                ...messages
-            ],
-            response_format: zodResponseFormat(ConfigSchema, 'agent_config'),
-        })
-
-        const content = completion.choices[0].message.content
-        if (!content) {
-            throw new Error('No content in response')
-        }
-
-        const result = JSON.parse(content)
-
-        // ConfigMetadata型に合わせるための変換
-        // tone_label を tone ('polite' | 'friendly' | 'casual') にマッピングする簡易ロジック
-        let tone: 'polite' | 'friendly' | 'casual' = 'polite'
-        const label = result.config_metadata.tone_label || ''
-        if (label.includes('フレンドリー') || label.includes('元気') || label.includes('親しみ')) tone = 'friendly'
-        if (label.includes('カジュアル') || label.includes('フランク') || label.includes('タメ口')) tone = 'casual'
-
-        const formattedResult = {
-            system_prompt: result.system_prompt,
-            config_metadata: {
-                tone,
-                greeting_message: result.config_metadata.sample_greeting,
-                reservation_gate_question: result.config_metadata.reservation_gate_question,
-                sms_templates: {
-                    approved: result.config_metadata.sms_approved,
-                    rejected: result.config_metadata.sms_rejected
-                },
-                business_description: `${result.config_metadata.business_type}のAI電話番`,
-                rules: result.config_metadata.key_rules,
-                business_type: result.config_metadata.business_type
-            }
-        }
-
-        return NextResponse.json(formattedResult)
-
-    } catch (error) {
-        console.error('Generate API Error:', error)
-        return NextResponse.json(
-            { error: 'Internal Server Error' },
-            { status: 500 }
-        )
-    }
-}
-
----
----
-File: web/src/app/api/builder/history/route.ts
-import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
-
-const MAX_MESSAGES = 50
-
-type Message = {
-    role: 'user' | 'assistant'
-    content: string
-    timestamp: string
-}
-
-export async function GET() {
-    try {
-        const supabase = await createClient()
-        const {
-            data: { user },
-        } = await supabase.auth.getUser()
-
-        if (!user) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            )
-        }
-
-        const { data, error } = await supabase
-            .from('concierge_chat_history')
-            .select('messages')
-            .eq('user_id', user.id)
-            .single()
-
-        if (error) {
-            // No history found is not an error - return empty array
-            if (error.code === 'PGRST116') {
-                return NextResponse.json({ messages: [] })
-            }
-            console.error('Error fetching chat history:', error)
-            return NextResponse.json(
-                { error: 'Failed to fetch chat history' },
-                { status: 500 }
-            )
-        }
-
-        return NextResponse.json({ messages: data?.messages || [] })
-
-    } catch (error) {
-        console.error('Chat history GET error:', error)
-        return NextResponse.json(
-            { error: 'Internal Server Error' },
-            { status: 500 }
-        )
-    }
-}
-
-export async function POST(req: Request) {
-    try {
-        const supabase = await createClient()
-        const {
-            data: { user },
-        } = await supabase.auth.getUser()
-
-        if (!user) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            )
-        }
-
-        const { messages } = await req.json()
-
-        // Validate messages array
-        if (!Array.isArray(messages)) {
-            return NextResponse.json(
-                { error: 'Messages must be an array' },
-                { status: 400 }
-            )
-        }
-
-        // Validate message structure
-        for (const msg of messages) {
-            if (!msg.role || !msg.content || !msg.timestamp) {
-                return NextResponse.json(
-                    { error: 'Invalid message structure. Each message must have role, content, and timestamp' },
-                    { status: 400 }
-                )
-            }
-            if (!['user', 'assistant'].includes(msg.role)) {
-                return NextResponse.json(
-                    { error: 'Invalid message role. Must be "user" or "assistant"' },
-                    { status: 400 }
-                )
-            }
-        }
-
-        // Limit to most recent MAX_MESSAGES
-        const limitedMessages = messages.slice(-MAX_MESSAGES)
-
-        // Upsert chat history
-        const { error } = await supabase
-            .from('concierge_chat_history')
-            .upsert(
-                {
-                    user_id: user.id,
-                    messages: limitedMessages,
-                    updated_at: new Date().toISOString()
-                },
-                { onConflict: 'user_id' }
-            )
-
-        if (error) {
-            console.error('Error saving chat history:', error)
-            return NextResponse.json(
-                { error: 'Failed to save chat history' },
-                { status: 500 }
-            )
-        }
-
-        return NextResponse.json({ success: true })
-
-    } catch (error) {
-        console.error('Chat history POST error:', error)
-        return NextResponse.json(
-            { error: 'Internal Server Error' },
-            { status: 500 }
-        )
-    }
-}
-
----
----
-File: web/src/app/api/builder/parse/route.ts
-import { NextResponse } from 'next/server'
-import OpenAI from 'openai'
-import { CONFIG_PARSER_SYSTEM_PROMPT } from '@/lib/prompts/configParser'
-import { z } from 'zod'
-
-import { createClient } from '@/utils/supabase/server'
-
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-})
-
-const parseSchema = z.object({
-    system_prompt: z.string(),
-})
-
-export async function POST(req: Request) {
-    try {
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            )
-        }
-
-        const body = await req.json()
-        const { system_prompt } = parseSchema.parse(body)
-
-        const completion = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [
-                { role: 'system', content: CONFIG_PARSER_SYSTEM_PROMPT },
-                { role: 'user', content: system_prompt }
-            ],
-            response_format: { type: 'json_object' },
-            temperature: 0,
-        })
-
-        const content = completion.choices[0].message.content
-        if (!content) {
-            throw new Error('No content generated')
-        }
-
-        const parsedData = JSON.parse(content)
-
-        // Map the parsed data to match ConfigMetadata structure if needed
-        // The prompt is designed to output matching keys, but we ensure type safety here
-        const config_metadata = {
-            greeting_message: parsedData.greeting_message || '',
-            tone: parsedData.tone || 'polite',
-            business_description: parsedData.business_summary || '', // prompt uses business_summary, mapping to business_description
-            rules: parsedData.key_rules || [],
-            business_type: parsedData.business_type || ''
-        }
-
-        return NextResponse.json(config_metadata)
-    } catch (error) {
-        console.error('Parse error:', error)
-        return NextResponse.json(
-            { error: 'Failed to parse system prompt' },
-            { status: 500 }
-        )
-    }
-}
-
----
----
 File: web/src/app/api/checkout/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
@@ -1869,38 +1483,23 @@ File: web/src/app/dashboard/ConciergeBuilder.tsx
 'use client'
 
 /**
- * Setup Concierge - AI電話番の対話型設定コンポーネント
+ * Setup Concierge - AI電話番の設定コンポーネント
  * 
- * このコンポーネントは、ユーザーとAIの対話を通じてAI電話番の設定を生成します。
+ * このコンポーネントはAI電話番の設定を編集・保存します。
  * 
- * ## 設計方針：単一設定のプレビュー
- * プレビューエリアは常に「現在の1つの設定」のみを表示します。
- * 過去バージョンとの比較や before/after 表示は意図的に含まれていません。
- * 
- * ## データフロー
- * 1. ユーザーがチャットでヒアリング
- * 2. 「プロンプトを生成」→ API呼び出し → currentSettings に保存
- * 3. プレビューエリアが自動更新（Visual/Codeタブで同じ設定を異なる形式で表示）
- * 4. 「保存」→ DBに保存
- * 
- * ## 将来のバージョン管理について
- * もし将来的にバージョン管理や設定の比較機能が必要になった場合は、
- * 別画面・別コンポーネントとして設計することを推奨します。
+ * ## 設計方針
+ * - フォーム編集のみ（会話型セットアップ機能は廃止）
+ * - system_prompt は自由記述で編集可能
+ * - config_metadata は個別フィールドで編集可能
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { AgentSettings, ConfigMetadata } from '@/types/agent'
-import { Send, Sparkles, Save, Loader2, Bot, User, RotateCcw, Trash2 } from 'lucide-react'
+import { Save, Loader2, Trash2 } from 'lucide-react'
 import { saveAgentSettings, deleteAgentSettings } from './actions'
 
 interface ConciergeBuilderProps {
     initialSettings: AgentSettings
-}
-
-type Message = {
-    role: 'user' | 'assistant'
-    content: string
-    timestamp: string
 }
 
 const BLANK_SETTINGS: AgentSettings = {
@@ -1920,29 +1519,16 @@ const BLANK_SETTINGS: AgentSettings = {
 }
 
 export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
-    const [messages, setMessages] = useState<Message[]>([
-        { role: 'assistant', content: 'こんにちは！私はAiLunaのセットアップコンシェルジュです。私と一緒に、あなたの会社の電話番AIを作成しましょう。まず、電話に出た際の「最初の挨拶」を決めましょう。どのような挨拶にしますか？', timestamp: new Date().toISOString() }
-    ])
-    const [input, setInput] = useState('')
-    const [isChatLoading, setIsChatLoading] = useState(false)
-    const [isGenerating, setIsGenerating] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [isResettingSettings, setIsResettingSettings] = useState(false)
-    const [isLoadingHistory, setIsLoadingHistory] = useState(true)
-    const [justGenerated, setJustGenerated] = useState(false)
-    const [mobileTab, setMobileTab] = useState<'chat' | 'preview'>('chat')
 
     /**
      * 現在の設定（単一）
-     * プレビューエリアに表示される唯一の設定オブジェクトです。
-     * 設定生成時に更新され、保存時にDBに永続化されます。
-     * 
-     * 注意: 比較用の「旧設定」や「新設定」などの状態は持ちません。
+     * 設定フォームに表示される唯一の設定オブジェクトです。
+     * 編集後、保存時にDBに永続化されます。
      */
     const [currentSettings, setCurrentSettings] = useState<AgentSettings>(initialSettings || BLANK_SETTINGS)
     const [savedSettings, setSavedSettings] = useState<AgentSettings>(initialSettings || BLANK_SETTINGS)
-    const [activeTab, setActiveTab] = useState<'visual' | 'code'>('visual')
-    const chatContainerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         if (initialSettings) {
@@ -1951,163 +1537,17 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
         }
     }, [initialSettings])
 
-    const scrollToBottom = () => {
-        if (chatContainerRef.current) {
-            const { scrollHeight, clientHeight } = chatContainerRef.current
-            // ページ全体のスクロールを誘発せず、コンテナ内だけで完結させる
-            chatContainerRef.current.scrollTo({
-                top: scrollHeight - clientHeight,
-                behavior: 'smooth'
-            })
-        }
-    }
-
-    useEffect(() => {
-        scrollToBottom()
-    }, [messages])
-
-    // Load chat history on mount
-    useEffect(() => {
-        const loadHistory = async () => {
-            try {
-                const response = await fetch('/api/builder/history')
-                const data = await response.json()
-
-                if (response.ok && data.messages && data.messages.length > 0) {
-                    setMessages(data.messages)
-                }
-            } catch (error) {
-                console.error('Failed to load chat history:', error)
-                // Keep default welcome message on error
-            } finally {
-                setIsLoadingHistory(false)
-            }
-        }
-
-        loadHistory()
-    }, [])
-
-    // Auto-save chat history
-    const saveHistory = async (messagesToSave: Message[]) => {
-        try {
-            await fetch('/api/builder/history', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: messagesToSave })
-            })
-        } catch (error) {
-            console.error('Failed to save chat history:', error)
-            // Don't block UI on save errors
-        }
-    }
-
-    const handleSendMessage = async () => {
-        if (!input.trim() || isChatLoading) return
-
-        const userMessage: Message = { role: 'user', content: input, timestamp: new Date().toISOString() }
-        const updatedMessages = [...messages, userMessage]
-        setMessages(updatedMessages)
-        setInput('')
-        setIsChatLoading(true)
-
-        try {
-            const response = await fetch('/api/builder/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: updatedMessages.map(m => ({ role: m.role, content: m.content }))
-                })
-            })
-
-            const data = await response.json()
-            if (data.error) throw new Error(data.error)
-
-            const assistantMessage: Message = { role: 'assistant', content: data.content, timestamp: new Date().toISOString() }
-            const finalMessages = [...updatedMessages, assistantMessage]
-            setMessages(finalMessages)
-
-            // Auto-save after successful exchange
-            await saveHistory(finalMessages)
-        } catch (error) {
-            console.error('Chat error:', error)
-            alert('エラーが発生しました。もう一度お試しください。')
-        } finally {
-            setIsChatLoading(false)
-        }
-    }
-
-    const handleGenerateSettings = async () => {
-        if (isGenerating) return
-        setIsGenerating(true)
-
-        try {
-            const response = await fetch('/api/builder/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages })
-            })
-
-            const data = await response.json()
-            if (data.error) throw new Error(data.error)
-
-            setCurrentSettings(data)
-            // 自動的にVisualタブに切り替え
-            setActiveTab('visual')
-            setJustGenerated(true)
-            setMobileTab('preview')
-        } catch (error) {
-            console.error('Generate error:', error)
-            alert('プロンプトの生成に失敗しました。')
-        } finally {
-            setIsGenerating(false)
-        }
-    }
-
     const handleSave = async () => {
         if (isSaving) return
         setIsSaving(true)
 
         try {
-            let settingsToSave = currentSettings
-
-            // If saving from Code tab, parse the system prompt first to sync Visual tab
-            if (activeTab === 'code') {
-                // Show loading state for parsing
-                // Ideally we would have a separate state for "Parsing..." but isSaving covers the disabled state.
-                // We can use a toast or just rely on the fact that it takes a moment.
-                // For now, let's assume the user understands "Saving" includes processing.
-
-                try {
-                    const parseResponse = await fetch('/api/builder/parse', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ system_prompt: currentSettings.system_prompt })
-                    })
-
-                    if (!parseResponse.ok) {
-                        throw new Error('Failed to parse system prompt')
-                    }
-
-                    const parsedMetadata = await parseResponse.json()
-                    settingsToSave = {
-                        ...currentSettings,
-                        config_metadata: parsedMetadata
-                    }
-                    // Update local state to reflect parsed metadata immediately
-                    setCurrentSettings(settingsToSave)
-                } catch (parseError) {
-                    console.error('Parse error:', parseError)
-                    // Continue with save even if parse fails
-                }
-            }
-
-            const result = await saveAgentSettings(settingsToSave.system_prompt, settingsToSave.config_metadata)
+            const result = await saveAgentSettings(currentSettings.system_prompt, currentSettings.config_metadata)
             if (result.error) {
                 alert(result.error)
             } else {
-                alert('プロンプトを保存しました！' + (activeTab === 'code' ? '\n設定内容タブも自動的に更新されました。' : ''))
-                setSavedSettings(settingsToSave)
-                setJustGenerated(false)
+                alert('設定を保存しました！')
+                setSavedSettings(currentSettings)
             }
         } catch (error) {
             console.error('Save error:', error)
@@ -2117,48 +1557,22 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
         }
     }
 
-    const handleResetConversation = async () => {
-        if (!window.confirm('会話履歴がすべて消去されますが、よろしいですか？\nこの操作は取り消せません。\n（すでに生成されたプロンプトは残ります）')) {
-            return
-        }
-
-        const initialMessage: Message = {
-            role: 'assistant',
-            content: 'こんにちは！AiLunaのセットアップコンシェルジュです。私と一緒に、あなたの会社の電話番AIを作成しましょう。まず、電話に出た際の「最初の挨拶」を決めましょう。どのような挨拶にしますか？',
-            timestamp: new Date().toISOString()
-        }
-
-        setMessages([initialMessage])
-        setMobileTab('chat')
-
-        // Reset history in DB
-        try {
-            await saveHistory([initialMessage])
-        } catch (error) {
-            console.error('Failed to reset history:', error)
-        }
-    }
-
     const handleResetSettings = async () => {
-        if (!window.confirm('生成されたプロンプトがすべて破棄されますが、よろしいですか？\nデータベースからも完全に削除されます。\nこの操作は取り消せません。')) {
+        if (!window.confirm('設定がすべて破棄されますが、よろしいですか？\nデータベースからも完全に削除されます。\nこの操作は取り消せません。')) {
             return
         }
 
         setIsResettingSettings(true)
 
         try {
-            // Delete from database
             const result = await deleteAgentSettings()
             if (result.error) {
                 alert(result.error)
                 return
             }
 
-            // Reset local state
             setCurrentSettings(BLANK_SETTINGS)
             setSavedSettings(BLANK_SETTINGS)
-            setActiveTab('visual')
-            setJustGenerated(false)
         } catch (error) {
             console.error('Reset error:', error)
             alert('設定のリセット中にエラーが発生しました。')
@@ -2171,160 +1585,22 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
     const hasChanges = JSON.stringify(currentSettings) !== JSON.stringify(savedSettings)
 
     return (
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-140px)] lg:h-[calc(100vh-200px)] gap-4 lg:gap-6">
-            {/* Mobile Tabs */}
-            <div className="lg:hidden flex bg-zinc-100 p-1 rounded-lg shrink-0">
-                <button
-                    onClick={() => setMobileTab('chat')}
-                    className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mobileTab === 'chat'
-                        ? 'bg-white text-zinc-900 shadow-sm'
-                        : 'text-zinc-500'
-                        }`}
-                >
-                    会話
-                </button>
-                <button
-                    onClick={() => setMobileTab('preview')}
-                    className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mobileTab === 'preview'
-                        ? 'bg-white text-zinc-900 shadow-sm'
-                        : isGenerating
-                            ? 'animate-pulse ring-2 ring-indigo-400 ring-offset-1 bg-indigo-50 text-indigo-700'
-                            : 'text-zinc-500'
-                        }`}
-                >
-                    プロンプトプレビュー
-                </button>
-            </div>
-
-            {/* Left Side: Chat UI Area */}
-            <div className={`flex-1 bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col ${mobileTab === 'chat' ? 'flex' : 'hidden'} lg:flex`}>
-                <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center">
-                    <div>
-                        <h3 className="font-semibold text-zinc-900">対話型セットアップ</h3>
-                        <p className="text-xs text-zinc-500">AIと会話してプロンプトを作りましょう</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="relative group">
-                            <div className="absolute top-full right-0 mt-2 w-max hidden group-hover:block z-20">
-                                <div className="bg-zinc-800 text-white text-xs p-2 rounded-lg shadow-lg relative opacity-90">
-                                    会話をリセットします
-                                    （既に生成された設定は残ります）
-                                    <div className="absolute -top-1 right-3 w-2 h-2 bg-zinc-800 rotate-45"></div>
-                                </div>
-                            </div>
-                            <button
-                                onClick={handleResetConversation}
-                                disabled={isGenerating || isChatLoading || messages.length <= 1}
-                                className="flex items-center gap-2 px-3 py-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-xs font-medium"
-                                title=""
-                            >
-                                <RotateCcw className="h-4 w-4" />
-                                <span className="hidden sm:inline">会話をリセット</span>
-                            </button>
-                        </div>
-                        <div className="relative group">
-                            <div className="absolute top-full right-0 mt-2 w-64 hidden group-hover:block z-20">
-                                <div className="bg-zinc-800 text-white text-xs p-2 rounded-lg shadow-lg relative opacity-90">
-                                    これまでの会話内容を解析して、
-                                    AIのシステムプロンプトを自動生成します。
-                                    <div className="absolute -top-1 right-6 w-2 h-2 bg-zinc-800 rotate-45"></div>
-                                </div>
-                            </div>
-                            <button
-                                onClick={handleGenerateSettings}
-                                disabled={isGenerating || messages.length < 3}
-                                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                                プロンプトを生成・更新する
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div ref={chatContainerRef} className="flex-1 p-4 overflow-y-auto bg-zinc-50/30 space-y-4">
-                    {isLoadingHistory ? (
-                        <div className="flex justify-center items-center h-full">
-                            <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
-                        </div>
-                    ) : (
-                        <>
-                            {messages.map((msg, idx) => (
-                                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`flex gap-2 max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'}`}>
-                                            {msg.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-                                        </div>
-                                        <div className={`p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-zinc-200 text-zinc-800 rounded-tl-none shadow-sm'}`}>
-                                            {msg.content}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                            {isChatLoading && (
-                                <div className="flex justify-start">
-                                    <div className="flex gap-2">
-                                        <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
-                                            <Bot className="h-4 w-4" />
-                                        </div>
-                                        <div className="bg-white border border-zinc-200 p-3 rounded-2xl rounded-tl-none shadow-sm">
-                                            <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </>
-                    )}
-                </div>
-
-                <div className="p-4 bg-white border-t border-zinc-100">
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleSendMessage()}
-                            placeholder="メッセージを入力..."
-                            className="flex-1 bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2 text-base lg:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                            disabled={isChatLoading}
-                        />
-                        <button
-                            onClick={handleSendMessage}
-                            disabled={!input.trim() || isChatLoading}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <Send className="h-4 w-4" />
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Right Side: Settings Preview Area */}
-            {/* 
-                設定プレビューエリア
-                
-                このエリアは常に「現在の1つの設定」のみを表示します。
-                - Visual タブ: config_metadata から抽出した情報をカード形式で表示
-                - Code タブ: system_prompt の全文を Raw 形式で表示
-                
-                過去バージョンとの比較や before/after 表示は含まれていません。
-                これは意図的な設計です。
-            */}
-            <div className={`w-full lg:w-[400px] bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col ${mobileTab === 'preview' ? 'flex' : 'hidden'} lg:flex`}>
+        <div className="flex flex-col h-[calc(100vh-140px)] lg:h-[calc(100vh-200px)]">
+            {/* Settings Form */}
+            <div className="flex-1 bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex flex-col">
                 <div className="p-4 border-b border-zinc-100 bg-zinc-50/50 flex flex-col gap-3">
                     <div className="flex justify-between items-center">
                         <div>
-                            <h3 className="font-semibold text-zinc-900">プロンプトプレビュー</h3>
-                            <p className="text-xs text-zinc-500">生成されたプロンプトを確認・編集・保存</p>
+                            <h3 className="font-semibold text-zinc-900">AI電話番設定</h3>
+                            <p className="text-xs text-zinc-500">店舗情報・システムプロンプトを編集・保存</p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2 relative">
-
                         <div className="relative group">
                             <div className="absolute top-full left-0 mt-2 w-max hidden group-hover:block z-20">
                                 <div className="bg-zinc-800 text-white text-xs p-2 rounded-lg shadow-lg relative opacity-90">
-                                    生成されたプロンプトを破棄し、初期状態に戻します
+                                    設定を破棄し、初期状態に戻します
                                     <div className="absolute -top-1 left-3 w-2 h-2 bg-zinc-800 rotate-45"></div>
                                 </div>
                             </div>
@@ -2339,222 +1615,167 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                         </div>
                         <button
                             onClick={handleSave}
-                            disabled={isSaving || !hasChanges || !currentSettings?.system_prompt}
+                            disabled={isSaving || !hasChanges}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${!hasChanges
                                 ? 'bg-white text-zinc-400 border border-zinc-200 shadow-sm'
-                                : justGenerated
-                                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_0_15px_rgba(79,70,229,0.5)] animate-pulse ring-2 ring-indigo-300 ring-offset-2'
-                                    : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+                                : 'bg-zinc-900 hover:bg-zinc-800 text-white'
                                 }`}
                         >
                             {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                            {isSaving && activeTab === 'code' ? '解析中...' : '保存'}
-                        </button>
-                    </div>
-
-                    {/* Tabs */}
-                    <div className="flex bg-zinc-100 p-1 rounded-lg">
-                        <button
-                            onClick={() => setActiveTab('visual')}
-                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'visual'
-                                ? 'bg-white text-zinc-900 shadow-sm'
-                                : 'text-zinc-500 hover:text-zinc-700'
-                                }`}
-                        >
-                            設定内容
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('code')}
-                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'code'
-                                ? 'bg-white text-zinc-900 shadow-sm'
-                                : 'text-zinc-500 hover:text-zinc-700'
-                                }`}
-                        >
-                            プロンプト編集
+                            保存
                         </button>
                     </div>
                 </div>
 
-                <div className="p-6 overflow-y-auto max-h-[500px] lg:max-h-none lg:flex-1">
-                    {isGenerating ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4 animate-in fade-in duration-300">
-                            <div className="relative">
-                                <div className="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-75"></div>
-                                <div className="relative bg-white p-4 rounded-full border-2 border-indigo-100 shadow-sm">
-                                    <Sparkles className="h-8 w-8 text-indigo-600 animate-pulse" />
+                <div className="p-6 overflow-y-auto flex-1">
+                    <div className="space-y-6 max-w-2xl">
+                        <div className="space-y-2">
+                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">基本情報</h4>
+                            <div className="bg-zinc-50 rounded-lg p-3 border border-zinc-100 space-y-2">
+                                <div className="grid grid-cols-3 gap-2 text-xs items-center">
+                                    <span className="text-zinc-500">業種</span>
+                                    <input
+                                        type="text"
+                                        className="col-span-2 text-sm border-zinc-200 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        value={currentSettings?.config_metadata?.business_type || ''}
+                                        onChange={(e) => setCurrentSettings(prev => ({
+                                            ...prev,
+                                            config_metadata: {
+                                                ...prev.config_metadata,
+                                                business_type: e.target.value
+                                            }
+                                        }))}
+                                        placeholder="例: 居酒屋、美容院、歯科医院"
+                                    />
                                 </div>
-                            </div>
-                            <div className="space-y-2">
-                                <h3 className="text-zinc-900 font-medium">AIがあなたの専属電話番を作成中...</h3>
-                                <p className="text-xs text-zinc-500 max-w-[240px] mx-auto leading-relaxed">
-                                    これまでの会話を分析して、最適なプロンプトを構成しています。<br />
-                                    30秒ほどお待ちください。
-                                </p>
-                            </div>
-                        </div>
-                    ) : activeTab === 'visual' ? (
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">基本情報</h4>
-                                <div className="bg-zinc-50 rounded-lg p-3 border border-zinc-100 space-y-2">
-                                    <div className="grid grid-cols-3 gap-2 text-xs">
-                                        <span className="text-zinc-500">業種</span>
-                                        <span className="col-span-2 font-medium text-zinc-900">{currentSettings?.config_metadata?.business_type}</span>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2 text-xs">
-                                        <span className="text-zinc-500">口調</span>
-                                        <span className="col-span-2 font-medium text-zinc-900">
-                                            {currentSettings?.config_metadata?.tone === 'polite' ? '丁寧' :
-                                                currentSettings?.config_metadata?.tone === 'friendly' ? 'フレンドリー' :
-                                                    currentSettings?.config_metadata?.tone === 'casual' ? 'カジュアル' : ''}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">基本プロンプト設定</h4>
-                                <div className="space-y-4 bg-zinc-50 rounded-lg p-3 border border-zinc-100">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-medium text-zinc-700">第一声 (Greeting)</label>
-                                        <input
-                                            type="text"
-                                            className="w-full text-sm border-zinc-200 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                            value={currentSettings?.config_metadata?.greeting_message || ''}
-                                            onChange={(e) => setCurrentSettings(prev => ({
-                                                ...prev,
-                                                config_metadata: {
-                                                    ...prev.config_metadata,
-                                                    greeting_message: e.target.value
-                                                }
-                                            }))}
-                                            placeholder="お電話ありがとうございます。居酒屋AiLunaです。"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-medium text-zinc-700">予約確認の問いかけ (Gate Question)</label>
-                                        <input
-                                            type="text"
-                                            className="w-full text-sm border-zinc-200 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                            value={currentSettings?.config_metadata?.reservation_gate_question || ''}
-                                            onChange={(e) => setCurrentSettings(prev => ({
-                                                ...prev,
-                                                config_metadata: {
-                                                    ...prev.config_metadata,
-                                                    reservation_gate_question: e.target.value
-                                                }
-                                            }))}
-                                            placeholder="ご予約のお電話でしょうか？"
-                                        />
-                                        <p className="text-[10px] text-zinc-400">
-                                            第一声の直後に、予約かどうかを判別するために尋ねる言葉です。
-                                        </p>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-medium text-zinc-700">非予約時の対応・人格 (System Prompt)</label>
-                                        <textarea
-                                            className="w-full text-sm border-zinc-200 rounded-lg px-3 py-2 min-h-[120px] focus:ring-indigo-500 focus:border-indigo-500"
-                                            value={currentSettings?.system_prompt || ''}
-                                            onChange={(e) => setCurrentSettings(prev => ({ ...prev, system_prompt: e.target.value }))}
-                                            placeholder="あなたは親切な店員です。予約以外の質問（営業時間や場所など）には丁寧に答えてください..."
-                                        />
-                                        <p className="text-[10px] text-zinc-400">
-                                            予約フロー以外でのAIの振る舞いや口調を定義します。
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">詳細</h4>
-                                <ul className="bg-zinc-50 rounded-lg p-3 border border-zinc-100 space-y-1">
-                                    {currentSettings?.config_metadata?.rules && currentSettings.config_metadata.rules.length > 0 ? (
-                                        currentSettings.config_metadata.rules.map((rule, i) => (
-                                            <li key={i} className="text-xs text-zinc-600 flex gap-2">
-                                                <span className="text-indigo-500">•</span>
-                                                {rule}
-                                            </li>
-                                        ))
-                                    ) : (
-                                        <li className="text-xs text-zinc-400">ルールはまだありません</li>
-                                    )}
-                                </ul>
-                            </div>
-
-
-                            <div className="space-y-2">
-                                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">SMSテンプレート設定</h4>
-                                <div className="space-y-4 bg-zinc-50 rounded-lg p-3 border border-zinc-100">
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-medium text-zinc-700">承認時メッセージ</label>
-                                        <textarea
-                                            className="w-full text-xs border-zinc-200 rounded px-2 py-1.5 min-h-[60px] focus:ring-indigo-500 focus:border-indigo-500"
-                                            value={currentSettings?.config_metadata?.sms_templates?.approved || ''}
-                                            onChange={(e) => setCurrentSettings(prev => ({
-                                                ...prev,
-                                                config_metadata: {
-                                                    ...prev.config_metadata,
-                                                    sms_templates: {
-                                                        ...prev.config_metadata.sms_templates,
-                                                        approved: e.target.value,
-                                                        rejected: prev.config_metadata.sms_templates?.rejected || ''
-                                                    }
-                                                }
-                                            }))}
-                                            placeholder="ご予約を承りました。{{dateTime}}{{partySize}}"
-                                        />
-                                        <p className="text-[10px] text-zinc-400">
-                                            利用可能: {'{{dateTime}}'}, {'{{partySize}}'}, {'{{extraMessage}}'}
-                                        </p>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-medium text-zinc-700">却下時メッセージ</label>
-                                        <textarea
-                                            className="w-full text-xs border-zinc-200 rounded px-2 py-1.5 min-h-[60px] focus:ring-indigo-500 focus:border-indigo-500"
-                                            value={currentSettings?.config_metadata?.sms_templates?.rejected || ''}
-                                            onChange={(e) => setCurrentSettings(prev => ({
-                                                ...prev,
-                                                config_metadata: {
-                                                    ...prev.config_metadata,
-                                                    sms_templates: {
-                                                        approved: prev.config_metadata.sms_templates?.approved || '',
-                                                        rejected: e.target.value
-                                                    }
-                                                }
-                                            }))}
-                                            placeholder="申し訳ありません。ご希望の日時はお受けできませんでした。{{reason}}"
-                                        />
-                                        <p className="text-[10px] text-zinc-400">
-                                            利用可能: {'{{reason}}'}, {'{{extraMessage}}'}
-                                        </p>
-                                    </div>
+                                <div className="grid grid-cols-3 gap-2 text-xs items-center">
+                                    <span className="text-zinc-500">口調</span>
+                                    <select
+                                        className="col-span-2 text-sm border-zinc-200 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        value={currentSettings?.config_metadata?.tone || 'polite'}
+                                        onChange={(e) => setCurrentSettings(prev => ({
+                                            ...prev,
+                                            config_metadata: {
+                                                ...prev.config_metadata,
+                                                tone: e.target.value as 'polite' | 'friendly' | 'casual'
+                                            }
+                                        }))}
+                                    >
+                                        <option value="polite">丁寧</option>
+                                        <option value="friendly">フレンドリー</option>
+                                        <option value="casual">カジュアル</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
-                    ) : (
-                        <div className="space-y-2 h-full flex flex-col min-h-[400px]">
-                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">システムプロンプト (Raw)</h4>
-                            <div className="bg-zinc-900 rounded-lg border border-zinc-800 flex-1 overflow-hidden flex flex-col">
-                                <div className="bg-indigo-500/10 border-b border-indigo-500/20 px-3 py-2">
-                                    <p className="text-[10px] text-indigo-400 flex items-center gap-1.5">
-                                        <span className="shrink-0">✨</span>
-                                        システムプロンプトを直接編集できます
+
+                        <div className="space-y-2">
+                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">基本プロンプト設定</h4>
+                            <div className="space-y-4 bg-zinc-50 rounded-lg p-3 border border-zinc-100">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-zinc-700">第一声 (Greeting)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full text-sm border-zinc-200 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        value={currentSettings?.config_metadata?.greeting_message || ''}
+                                        onChange={(e) => setCurrentSettings(prev => ({
+                                            ...prev,
+                                            config_metadata: {
+                                                ...prev.config_metadata,
+                                                greeting_message: e.target.value
+                                            }
+                                        }))}
+                                        placeholder="お電話ありがとうございます。居酒屋AiLunaです。"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-zinc-700">予約確認の問いかけ (Gate Question)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full text-sm border-zinc-200 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        value={currentSettings?.config_metadata?.reservation_gate_question || ''}
+                                        onChange={(e) => setCurrentSettings(prev => ({
+                                            ...prev,
+                                            config_metadata: {
+                                                ...prev.config_metadata,
+                                                reservation_gate_question: e.target.value
+                                            }
+                                        }))}
+                                        placeholder="ご予約のお電話でしょうか？"
+                                    />
+                                    <p className="text-[10px] text-zinc-400">
+                                        第一声の直後に、予約かどうかを判別するために尋ねる言葉です。
                                     </p>
                                 </div>
-                                <textarea
-                                    className="flex-1 w-full bg-transparent text-xs text-zinc-300 font-mono p-4 focus:outline-none resize-none"
-                                    value={currentSettings?.system_prompt || ''}
-                                    onChange={(e) => setCurrentSettings(prev => ({ ...prev, system_prompt: e.target.value }))}
-                                    spellCheck={false}
-                                />
+
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-zinc-700">店舗情報・非予約FAQ（自由記述）</label>
+                                    <textarea
+                                        className="w-full text-sm border-zinc-200 rounded-lg px-3 py-2 min-h-[200px] focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+                                        value={currentSettings?.system_prompt || ''}
+                                        onChange={(e) => setCurrentSettings(prev => ({ ...prev, system_prompt: e.target.value }))}
+                                        placeholder="店舗の営業時間、アクセス、メニュー情報、よくある質問への回答などを自由に記述してください..."
+                                    />
+                                    <p className="text-[10px] text-zinc-400">
+                                        予約フロー以外でのAIの振る舞いを定義するシステムプロンプトです。
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    )}
+
+                        <div className="space-y-2">
+                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">SMSテンプレート設定</h4>
+                            <div className="space-y-4 bg-zinc-50 rounded-lg p-3 border border-zinc-100">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-zinc-700">承認時メッセージ</label>
+                                    <textarea
+                                        className="w-full text-xs border-zinc-200 rounded px-2 py-1.5 min-h-[60px] focus:ring-indigo-500 focus:border-indigo-500"
+                                        value={currentSettings?.config_metadata?.sms_templates?.approved || ''}
+                                        onChange={(e) => setCurrentSettings(prev => ({
+                                            ...prev,
+                                            config_metadata: {
+                                                ...prev.config_metadata,
+                                                sms_templates: {
+                                                    ...prev.config_metadata.sms_templates,
+                                                    approved: e.target.value,
+                                                    rejected: prev.config_metadata.sms_templates?.rejected || ''
+                                                }
+                                            }
+                                        }))}
+                                        placeholder="ご予約を承りました。{{dateTime}}{{partySize}}"
+                                    />
+                                    <p className="text-[10px] text-zinc-400">
+                                        利用可能: {'{{dateTime}}'}, {'{{partySize}}'}, {'{{extraMessage}}'}
+                                    </p>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-zinc-700">却下時メッセージ</label>
+                                    <textarea
+                                        className="w-full text-xs border-zinc-200 rounded px-2 py-1.5 min-h-[60px] focus:ring-indigo-500 focus:border-indigo-500"
+                                        value={currentSettings?.config_metadata?.sms_templates?.rejected || ''}
+                                        onChange={(e) => setCurrentSettings(prev => ({
+                                            ...prev,
+                                            config_metadata: {
+                                                ...prev.config_metadata,
+                                                sms_templates: {
+                                                    approved: prev.config_metadata.sms_templates?.approved || '',
+                                                    rejected: e.target.value
+                                                }
+                                            }
+                                        }))}
+                                        placeholder="申し訳ありません。ご希望の日時はお受けできませんでした。{{reason}}"
+                                    />
+                                    <p className="text-[10px] text-zinc-400">
+                                        利用可能: {'{{reason}}'}, {'{{extraMessage}}'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div >
+        </div>
     )
 }
 
@@ -7205,197 +6426,18 @@ export function int16ToFloat32(samples: Int16Array): Float32Array {
 
 ---
 ---
-File: web/src/lib/prompts/configBuilder.ts
-/**
- * Builds the system prompt for config generation.
- */
-
-interface ExistingSettings {
-    system_prompt: string | null
-    config_metadata: any
-}
-
-export function buildConfigBuilderSystemPrompt(
-    existingSettings?: ExistingSettings | null
-): string {
-    // 基本定義
-    let systemPrompt = `
-あなたは電話番設定の生成AIです。
-会話履歴と既存設定をもとに、AI電話番（AiLuna）の以下の2つを出力してください。
-
-1. **system_prompt**: AIエージェントの振る舞いを規定する命令文
-2. **config_metadata**: 管理画面表示用の設定データ
-
-出力は必ず **JSON形式** で行い、余計な解説は含めないでください。
-`
-
-    // 既存設定の注入
-    if (existingSettings?.system_prompt || existingSettings?.config_metadata) {
-        systemPrompt += `
-## 既存設定（参考情報）
-以下の情報は参考として使い、会話内容に合わせて自由に書き換えてください。
-特に会話で「変更」の指示があった場合は、会話内容を絶対優先してください。
-
-### Current System Prompt:
-\`\`\`
-${existingSettings.system_prompt || '（未設定）'}
-\`\`\`
-
-### Current Metadata:
-\`\`\`json
-${JSON.stringify(existingSettings.config_metadata, null, 2) || '（未設定）'}
-\`\`\`
-`
-    } else {
-        systemPrompt += `
-## 新規作成
-既存設定がないため、ゼロから最適な設定を構築してください。
-`
-    }
-
-    // 生成ルールの詳細
-    systemPrompt += `
-## system_prompt 生成のガイドライン【重要】
-
-1. **基本スタンス（安全なデフォルト）**
-   - ユーザーが指示した内容は具体的に記述する。
-   - **指示がない項目については、「丁寧にお断りし、用件を聞いて担当者から折り返すと伝える」という安全なフォールバック動作を必ず組み込むこと。**
-   - 勝手に割引をしたり、約束をしてはいけないという「ガードレール」を含めること。
-   箇条書きで簡潔に、かつ必要な情報を含めること。
-
-
-
-2. **第一声（挨拶）の規定**
-   - 生成するsystem_promptの冒頭に、以下の形式で最初の発話を必ず指定すること。
-     - 「通話が接続されたとき、あなたの「最初の発話」は必ず次の一文だけにしてください。」
-     - 「一文目：」に続けて、会話で指定された挨拶文を記載する。
-   - ユーザー指定がない場合は、ビジネスにふさわしい一般的な挨拶を提案して上記形式で設定する。
-
-3. **予約確認の問いかけ（Gate Question）の規定**
-   - 挨拶の直後に「ご予約でしょうか？」と聞く文言を生成する。
-   - 会話で指定があればそれを、なければ「ご予約のお電話でしょうか？」等の標準的なものを設定。
-
-4. **構成要素（system_prompt）**
-   - **Role**: 非予約時の対応（FAQ回答や道案内）と、予約対応への誘導役。
-   - **Rules**: 非予約時の口調・トーンを反映。
-   - **Fallback**: 判断に迷った時の「折り返し提案」フロー。
-   - ※予約の具体的な項目収集ロジック（人数や日時など）はシステム側で制御するため、ここには詳しく書かなくてよい。「予約希望であれば予約フローへ誘導する」旨があれば十分。
-
-## config_metadata 生成のガイドライン
-   - **greeting_message**: system_prompt内で設定した「第一声」と同じ文章。
-   - **reservation_gate_question**: 生成した「予約確認の問いかけ」の文言。
-   - **sms_templates**:
-      - **approved**: 予約承認時のSMS文面（例: "ご予約承りました。{{dateTime}}にお待ちしております。"）
-      - **rejected**: 予約却下時のSMS文面（例: "申し訳ございません。{{reason}}のためお受けできませんでした。"）
-      - 文面はユーザーの口調指定（丁寧/フレンドリー等）に合わせて調整すること。
-
-## 出力フォーマット（JSON）
-\`\`\`json
-{
-  "system_prompt": "ここに生成されたプロンプト全文...",
-  "config_metadata": {
-    "greeting_message": "お電話ありがとうございます...",
-    "business_summary": "...",
-    "reservation_gate_question": "...",
-    "sms_templates": {
-        "approved": "...",
-        "rejected": "..."
-    }
-  }
-}
-\`\`\`
-`
-
-    return systemPrompt
-}
-
-export const CONFIG_BUILDER_SYSTEM_PROMPT = buildConfigBuilderSystemPrompt
----
----
-File: web/src/lib/prompts/configParser.ts
-export const CONFIG_PARSER_SYSTEM_PROMPT = `
-あなたはシステムプロンプトの解析官です。
-提供されたテキストのみを分析し、設定メタデータ（JSON）を抽出してください。
-
-# Instructions
-1. Analyze the provided text carefully.
-2. Extract the following configuration metadata based ONLY on the provided text.
-3. Ignore any prior conversation context; rely ONLY on the provided text.
-4. Output the result in the specified JSON format.
-
-# Output Schema (JSON)
-{
-  "greeting_message": "The initial greeting message used when the AI answers the phone.",
-  "tone": "The tone of the AI (polite, friendly, or casual). Infer this from the style of the text.",
-  "business_summary": "A brief summary of the business described in the text.",
-  "key_rules": [
-    "Rule 1",
-    "Rule 2",
-    ...
-  ],
-  "business_type": "The type of business (e.g., Restaurant, Dental Clinic, etc.). Infer this from the text."
-}
-
-# Constraints
-- The "tone" must be one of: "polite", "friendly", "casual". If unsure, default to "polite".
-- "key_rules" should be a list of specific instructions or constraints found in the text.
-- If a field cannot be determined from the text, use an empty string or empty array as appropriate.
-`
-
----
----
 File: web/src/lib/prompts/index.ts
 /**
  * System Prompts Module
- * 
+ *
  * Central export point for all system prompts used throughout the AiLuna application.
  * This module provides organized access to prompts for various AI interactions.
+ *
+ * Note: Builder-related prompts (setupConcierge, configBuilder, configParser)
+ * have been removed as the conversational setup feature was deprecated.
  */
 
-export * from './setupConcierge'
-export * from './configBuilder'
-export * from './configParser'
-
-
----
----
-File: web/src/lib/prompts/setupConcierge.ts
-export const SETUP_CONCIERGE_SYSTEM_PROMPT = `
-あなたは、AI電話取次サービス「AiLuna」のセットアップ・コンシェルジュです。
-対話を通じて、ユーザーが希望するAIの振る舞い（プロンプト）を作成するための情報を収集してください。
-
-# 重要：スコープ定義
-- **予約項目の設定は行いません。** 予約フォームの項目設定は、ユーザーが管理画面で手動で行うものであり、ここでは扱いません。
-- **ヒアリングの焦点:**
-  A. **基本の挨拶**（電話に出た時の第一声）
-  B. **非予約時の対応**（FAQ、営業時間、場所、料金など、予約以外で聞かれることへの答え方）
-  C. **AIのキャラクター・口調**（丁寧、フレンドリー、関西弁など）
-  D. **SMS通知の文面案**（予約承認時・却下時に送るメッセージの雰囲気）
-
-# 対話フロー
-1. **挨拶と紹介（初回）**
-   - 挨拶と、このチャットの目的（AIの振る舞いと通知文を作る）を説明する。
-   - まず「第一声の挨拶」をどうするか尋ねる。
-
-2. **非予約時の対応（FAQ）**
-   - 挨拶が決まったら、営業時間や場所、よくある質問への返し方を聞き出す。
-   - 例：「営業時間や場所を聞かれたらどう答えますか？」「何か特有のルール（席のみ予約NGなど）はありますか？」
-
-3. **キャラクター・口調**
-   - どのような雰囲気で話してほしいかを聞く。
-
-4. **SMS通知メッセージ（任意）**
-   - 予約承認時や、満席で断る際に送るショートメッセージの文面案を聞く。
-   - ※ここは「文面案」を作るだけで、実際のプレースホルダ設定は手動画面で行うことを補足してもよい。
-
-5. **生成への誘導**
-   - ある程度情報が集まったら、「設定を生成」ボタンを押すよう促す。
-   - 「これまでの内容でプロンプトと設定案を作成します。後で手動調整も可能です。」と伝える。
-
-# 禁止事項
-- 予約フォームの項目（入力フィールド）を聞き出そうとしないこと。
-- 「予約項目は何にしますか？」と聞かれたら、「予約項目の設定は、この後の『フォーム設定』タブで行えます。ここではAIの話し方やルールを決めましょう」と誘導すること。
-`
+// No exports - builder prompts removed
 
 ---
 ---
@@ -8185,7 +7227,7 @@ File: web/README.md
 AiLuna の **SaaS管理画面**（Next.js + Supabase + Stripe）です。
 
 - ログイン/サインアップ（Supabase Auth）
-- AIエージェント設定（対話形式で system prompt を生成 → `user_prompts` に保存）
+- AIエージェント設定（system prompt を手動編集 → `user_prompts` に保存）
 - 通話履歴の表示（`call_logs`）
 - Stripe Checkout でサブスク購入（※Webhook実装が別途必要）
 
@@ -8204,12 +7246,6 @@ AiLuna の **SaaS管理画面**（Next.js + Supabase + Stripe）です。
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=xxxx
-
-# OpenAI（Builder / parse / generate が利用）
-OPENAI_API_KEY=sk-...
-
-# Builderモデル（任意）
-AILUNA_MODEL_MINI=gpt-5-mini
 
 # Stripe（Checkout）
 STRIPE_SECRET_KEY=sk_test_...
@@ -8253,27 +7289,15 @@ npm run dev
 
 ## 4. 主要機能
 
-### 4.1 AIエージェント設定（Concierge Builder）
+### 4.1 AIエージェント設定
 - `src/app/dashboard/ConciergeBuilder.tsx`
-- 生成 API：
-  - `POST /api/builder/chat`（会話を進める）
-  - `POST /api/builder/generate`（system_prompt + config_metadata を生成）
-  - `POST /api/builder/parse`（system prompt → Visual表示用に分解）
-
-生成した設定はダッシュボードから **保存**すると、`user_prompts` に保存されます。
+- system_prompt と config_metadata を手動編集し、`user_prompts` に保存します。
 
 ### 4.2 通話履歴
 - `src/components/CallLogList.tsx`
 - サーバアクション：`src/app/dashboard/actions.ts`
 - Supabase の `call_logs` から `user_id` でフィルタして取得します。
 
----
-
-## 5. 重要な注意（セキュリティ/コスト）
-現状の最新コードでは **/api/builder/chat と /api/builder/parse と /api/builder/generate が未ログインでも叩けてしまう**可能性があります。  
-OpenAI API Key を使うため、必ず **ログイン必須（401）** に修正してください。
-
-（Antigravityへの修正指示を別途用意しています）
 
 ---
 
@@ -8286,13 +7310,12 @@ Checkoutは作れますが、`profiles.is_subscribed` を更新するには **St
 
 ---
 
-## 7. よくあるトラブル
-- `OPENAI_API_KEY` 未設定：Builder関連APIが500
+## 6. よくあるトラブル
 - `user_prompts` が無い：call-engine 側で DB 設定を読めず、fallback prompt になる
 
 ---
 
-## 8. 電話予約フロー安定化 (Acceptance Criteria)
+## 7. 電話予約フロー安定化 (Acceptance Criteria)
 本リポジトリおよび `ailuna-call-engine` の改修における受け入れ基準です。
 
 1. **Uniqueness**: 1通話 (`call_sid`) につき `reservation_requests` は最大1件のみ作成されること。
