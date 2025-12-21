@@ -274,7 +274,7 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                     ...prev,
                                     config_metadata: { ...prev.config_metadata, greeting_message: e.target.value }
                                 }))}
-                                placeholder="お電話ありがとうございます。◯◯です。ご予約のお電話でしょうか？"
+                                placeholder="お電話ありがとうございます。居酒屋AiLunaでございます。ご予約のお電話でしょうか？"
                             />
                             <p className="text-xs text-zinc-500 pl-1">
                                 店名を含めるとお客様が安心します。
