@@ -41,7 +41,7 @@ const BLANK_SETTINGS: AgentSettings = {
  */
 const DEFAULT_SETTINGS: AgentSettings = {
     system_prompt: `## 店舗基本情報
-- 店名: ○○（店舗名を入力）
+- 店名: 居酒屋AiLuna
 - 営業時間: 11:00〜22:00（ラストオーダー 21:30）
 - 定休日: 毎週月曜日
 - 住所: 東京都渋谷区○○1-2-3
@@ -58,13 +58,13 @@ const DEFAULT_SETTINGS: AgentSettings = {
 - メニューに関するご質問`,
     config_metadata: {
         tone: 'polite',
-        greeting_message: 'お電話ありがとうございます。○○でございます。ご予約のお電話でしょうか？',
+        greeting_message: 'お電話ありがとうございます。居酒屋AiLunaでございます。ご予約のお電話でしょうか？',
         business_description: '',
         rules: [],
         business_type: '飲食店',
         sms_templates: {
-            approved: '【○○】ご予約を承りました。\n{{dateTime}}\n{{partySize}}\nご来店をお待ちしております。',
-            rejected: '【○○】申し訳ございません。{{reason}}\n別の日時でのご予約をご検討いただけますと幸いです。'
+            approved: '【居酒屋AiLuna】ご予約を承りました。\n{{dateTime}}\n{{partySize}}\nご来店をお待ちしております。',
+            rejected: '【居酒屋AiLuna】申し訳ございません。{{reason}}\n別の日時でのご予約をご検討いただけますと幸いです。'
         }
     }
 }
