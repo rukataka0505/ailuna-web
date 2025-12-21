@@ -16,6 +16,7 @@ interface ScheduledBuffer {
 
 export interface AudioPlayerOptions {
     onMarkPlayed?: (markName: string) => void
+    onQueueEmpty?: () => void
 }
 
 export class AudioPlayer {
@@ -172,6 +173,9 @@ export class AudioPlayer {
             clearInterval(this.checkInterval)
             this.checkInterval = null
             this.isPlaying = false
+
+            // Notify that queue is empty (naturally finished)
+            this.options.onQueueEmpty?.()
         }
     }
 
