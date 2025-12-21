@@ -405,10 +405,6 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                         <div className="font-mono text-red-500 font-bold bg-red-50 w-max px-1.5 rounded">{`{{reason}}`}</div>
                                         <div className="text-zinc-600">お断り理由<br /><span className="text-zinc-400">却下時のみ有効</span></div>
                                     </div>
-                                    <div className="space-y-1">
-                                        <div className="font-mono text-purple-600 font-bold bg-purple-50 w-max px-1.5 rounded">{`{{extraMessage}}`}</div>
-                                        <div className="text-zinc-600">AI補足メッセージ<br /><span className="text-zinc-400">自動生成されます</span></div>
-                                    </div>
                                 </div>
                             </div>
                         )}
