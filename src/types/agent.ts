@@ -5,10 +5,8 @@
 export interface ConfigMetadata {
     /** AIの口調・トーン（丁寧/フレンドリー/カジュアル） */
     tone?: 'polite' | 'friendly' | 'casual'
-    /** 電話応対時の第一声の挨拶メッセージ */
+    /** 電話応対時の第一声の挨拶メッセージ（予約確認の問いかけ込み） */
     greeting_message: string
-    /** 「ご予約でしょうか？」等の確認メッセージ */
-    reservation_gate_question?: string
     /** ビジネスの説明文（例：「居酒屋のAI電話番」） */
     business_description: string
     /** 電話応対時の重要なルール（箇条書き） */

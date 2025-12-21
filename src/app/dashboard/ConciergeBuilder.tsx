@@ -25,7 +25,6 @@ const BLANK_SETTINGS: AgentSettings = {
     config_metadata: {
         tone: undefined,
         greeting_message: '',
-        reservation_gate_question: '',
         business_description: '',
         rules: [],
         business_type: '',
@@ -203,29 +202,10 @@ export function ConciergeBuilder({ initialSettings }: ConciergeBuilderProps) {
                                                 greeting_message: e.target.value
                                             }
                                         }))}
-                                        placeholder="お電話ありがとうございます。居酒屋AiLunaです。"
+                                        placeholder="お電話ありがとうございます。◯◯です。ご予約のお電話でしょうか？"
                                     />
                                 </div>
 
-                                <div className="space-y-1">
-                                    <label className="text-xs font-medium text-zinc-700">予約確認の問いかけ (Gate Question)</label>
-                                    <input
-                                        type="text"
-                                        className="w-full text-sm border-zinc-200 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                        value={currentSettings?.config_metadata?.reservation_gate_question || ''}
-                                        onChange={(e) => setCurrentSettings(prev => ({
-                                            ...prev,
-                                            config_metadata: {
-                                                ...prev.config_metadata,
-                                                reservation_gate_question: e.target.value
-                                            }
-                                        }))}
-                                        placeholder="ご予約のお電話でしょうか？"
-                                    />
-                                    <p className="text-[10px] text-zinc-400">
-                                        第一声の直後に、予約かどうかを判別するために尋ねる言葉です。
-                                    </p>
-                                </div>
 
                                 <div className="space-y-1">
                                     <label className="text-xs font-medium text-zinc-700">店舗情報・非予約FAQ（自由記述）</label>
