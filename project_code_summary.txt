@@ -1187,15 +1187,14 @@ export async function approveReservationRequest(
             body = templates.approved
                 .replace('{{dateTime}}', dateTimeDisplay)
                 .replace('{{partySize}}', partySizeStr)
-                .replace('{{extraMessage}}', customerMessage || '')
-
-            // Cleanup empty placeholders if any remained (optional, but good for cleanliness if easy. Here we just replaced known ones)
         } else {
             // Default
             body = `ご予約を承りました。${dateTimeDisplay}${partySizeStr}で確定しました。`
-            if (customerMessage) {
-                body += `\n\n${customerMessage}`
-            }
+        }
+
+        // Auto-append customer message if provided
+        if (customerMessage) {
+            body += `\n\n${customerMessage}`
         }
         const fromNumber = profile?.phone_number || undefined
 
@@ -1302,13 +1301,14 @@ export async function rejectReservationRequest(
             // Use Template
             body = templates.rejected
                 .replace('{{reason}}', reason)
-                .replace('{{extraMessage}}', customerMessage || '')
         } else {
             // Default
             body = `申し訳ありません。ご希望の日時はお受けできませんでした。${reason ? '\n' + reason : ''}`
-            if (customerMessage) {
-                body += `\n\n${customerMessage}`
-            }
+        }
+
+        // Auto-append customer message if provided
+        if (customerMessage) {
+            body += `\n\n${customerMessage}`
         }
         const fromNumber = profile?.phone_number || undefined
 
