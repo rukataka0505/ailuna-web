@@ -2461,7 +2461,7 @@ export function AgentSettingsSection({ settings }: AgentSettingsSectionProps) {
         <div className="space-y-6 h-full flex flex-col">
             <div>
                 <h2 className="text-2xl font-bold text-zinc-900">AIエージェント設定</h2>
-                <p className="text-zinc-500">対話形式でプロンプトを生成し、AIの振る舞いを設定できます。</p>
+                <p className="text-zinc-500">お店の情報やAIの振る舞いを設定できます。</p>
             </div>
 
             <div className="flex-1">
