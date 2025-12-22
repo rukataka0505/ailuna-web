@@ -6967,10 +6967,20 @@ export class WebCallClient {
 
                 case 'transcript':
                     // Handle transcript update (custom extension)
+                    console.log('[WebCallClient] Received transcript:', message)
+
+                    let speaker: 'user' | 'ai' = 'ai'
+                    if (message.speaker) {
+                        const s = String(message.speaker).toLowerCase()
+                        if (s === 'user' || s === 'human') {
+                            speaker = 'user'
+                        }
+                    }
+
                     this.options.onTranscript?.(
                         message.text || '',
                         message.isFinal ?? false,
-                        message.speaker === 'user' ? 'user' : 'ai'
+                        speaker
                     )
                     break
 
