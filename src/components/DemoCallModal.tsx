@@ -32,6 +32,9 @@ export function DemoCallModal({ isOpen, onClose }: DemoCallModalProps) {
     }, [])
 
     const handleTranscript = useCallback((text: string, isFinal: boolean, speaker: 'user' | 'ai') => {
+        // Only allow AI transcripts
+        if (speaker !== 'ai') return
+
         setTranscripts(prev => {
             const newItem: TranscriptItem = {
                 id: transcriptIdRef.current++,
@@ -207,16 +210,14 @@ export function DemoCallModal({ isOpen, onClose }: DemoCallModalProps) {
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {transcripts
-                                .filter((item) => item.speaker === 'ai')
-                                .map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className={`p-3 rounded-xl text-sm bg-indigo-500/20 text-indigo-100 ${!item.isFinal ? 'opacity-70' : ''}`}
-                                    >
-                                        <p>{item.text}</p>
-                                    </div>
-                                ))}
+                            {transcripts.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className={`p-3 rounded-xl text-sm bg-indigo-500/20 text-indigo-100 ${!item.isFinal ? 'opacity-70' : ''}`}
+                                >
+                                    <p>{item.text}</p>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
