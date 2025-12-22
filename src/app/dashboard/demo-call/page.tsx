@@ -223,41 +223,47 @@ export default function DemoCallPage() {
                     className="flex-1 min-h-[300px] max-h-[500px] p-4 bg-zinc-800/50 rounded-2xl overflow-y-auto 
                                border border-zinc-700/50"
                 >
-                    {transcripts.length === 0 ? (
-                        <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
-                            {!hasStarted ? (
-                                <div className="flex flex-col items-center gap-4">
-                                    <Mic className="h-12 w-12 text-zinc-600" />
-                                    <span>下のボタンをタップして通話を開始</span>
+                    {(() => {
+                        // Filter to AI-only for display, but keep all in state
+                        const aiTranscripts = transcripts.filter(item => item.speaker === 'ai')
+
+                        if (aiTranscripts.length === 0) {
+                            return (
+                                <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
+                                    {!hasStarted ? (
+                                        <div className="flex flex-col items-center gap-4">
+                                            <Mic className="h-12 w-12 text-zinc-600" />
+                                            <span>下のボタンをタップして通話を開始</span>
+                                        </div>
+                                    ) : isLoading ? (
+                                        <div className="flex items-center gap-2">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            <span>接続しています...</span>
+                                        </div>
+                                    ) : status === 'connected' ? (
+                                        <span>お待ちください...</span>
+                                    ) : callEnded ? (
+                                        <span>通話が終了しました</span>
+                                    ) : (
+                                        <span>会話履歴がここに表示されます</span>
+                                    )}
                                 </div>
-                            ) : isLoading ? (
-                                <div className="flex items-center gap-2">
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span>接続しています...</span>
-                                </div>
-                            ) : status === 'connected' ? (
-                                <span>お待ちください...</span>
-                            ) : callEnded ? (
-                                <span>通話が終了しました</span>
-                            ) : (
-                                <span>会話履歴がここに表示されます</span>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {transcripts.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className={`p-3 rounded-xl text-sm ${item.speaker === 'ai'
-                                        ? 'bg-indigo-500/20 text-indigo-100'
-                                        : 'bg-zinc-700/50 text-zinc-200'
-                                        } ${!item.isFinal ? 'opacity-70' : ''}`}
-                                >
-                                    <p>{item.text}</p>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                            )
+                        }
+
+                        return (
+                            <div className="space-y-3">
+                                {aiTranscripts.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className={`p-3 rounded-xl text-sm bg-indigo-500/20 text-indigo-100 ${!item.isFinal ? 'opacity-70' : ''}`}
+                                    >
+                                        <p>{item.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                    })()}
                 </div>
 
                 {/* Controls or Post-call navigation */}
