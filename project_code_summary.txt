@@ -4153,6 +4153,14 @@ File: web/src/app/globals.css
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Clinic LP Brand Colors */
+  --color-navy-950: #0B1120;
+  --color-navy-900: #0F172A;
+  --color-navy-800: #1E293B;
+  --color-coral-500: #FF6B6B;
+  --color-teal-400: #4ECDC4;
+  --color-indigo-600: #4361EE;
 }
 
 body {
@@ -6150,6 +6158,1021 @@ export default function Header() {
             </div>
         </header>
     )
+}
+
+---
+---
+File: web/src/components/lp/DemoPlaceholder.tsx
+import Link from 'next/link';
+import { Play, ArrowRight, Lock } from 'lucide-react';
+
+export default function DemoPlaceholder() {
+    const demos = [
+        { title: '初診予約', duration: '1:20', type: 'Reservation' },
+        { title: '診療時間・休診日', duration: '0:45', type: 'Inquiry' },
+        { title: '予約変更・キャンセル', duration: '1:10', type: 'Change' },
+    ];
+
+    return (
+        <section className="py-20 bg-navy-900 border-t border-white/5 relative overflow-hidden">
+            {/* Background Noise/Texture */}
+            <div className="absolute inset-0 opacity-[0.03] pattern-grid-lg pointer-events-none"></div>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div className="text-center mb-12">
+                    <h2 className="text-2xl font-bold text-white tracking-tight">
+                        実際の音声を聞く (準備中)
+                    </h2>
+                    <p className="mt-2 text-gray-400">
+                        AIの自然な対応をご確認いただけます。
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                    {demos.map((demo, index) => (
+                        <div
+                            key={index}
+                            className="group relative bg-navy-800/50 rounded-xl p-6 border border-white/5 hover:border-teal-500/30 transition-all hover:bg-navy-800 cursor-not-allowed"
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="text-xs font-medium px-2 py-1 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                                    {demo.type}
+                                </span>
+                                <span className="text-xs text-gray-500">{demo.duration}</span>
+                            </div>
+                            <h3 className="text-lg font-semibold text-white mb-6 group-hover:text-teal-400 transition-colors">
+                                {demo.title}
+                            </h3>
+
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-teal-400/10 flex items-center justify-center text-teal-400 group-hover:bg-teal-400 group-hover:text-navy-900 transition-all">
+                                    <Play className="h-4 w-4 fill-current" />
+                                </div>
+                                <div className="h-1 bg-navy-950 rounded-full flex-1 overflow-hidden">
+                                    <div className="h-full w-0 bg-teal-400 group-hover:w-1/3 transition-all duration-1000"></div>
+                                </div>
+                            </div>
+
+                            {/* Overlay for "Under Construction" feel but clickable looking */}
+                            {/* <div className="absolute inset-0 bg-navy-950/60 backdrop-blur-[1px] flex items-center justify-center rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
+                 <span className="text-xs font-mono text-gray-300 flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> 準備中
+                 </span>
+              </div> */}
+                        </div>
+                    ))}
+                </div>
+
+                <div className="mt-12 text-center">
+                    <p className="text-lg text-gray-300 mb-6">
+                        実際に使ってみたい方は、無料アカウント登録へ
+                    </p>
+                    <Link
+                        href="/login?mode=signup"
+                        className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/40"
+                    >
+                        無料で試す (アカウント登録)
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                    </Link>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+---
+---
+File: web/src/components/lp/FAQ.tsx
+export default function FAQ() {
+    const faqs = [
+        {
+            q: 'AIが聞き間違えたり、誤った回答をすることはありませんか？',
+            a: 'AIは日々進化していますが、完璧ではありません。そのため、予約はAIだけで確定せず、必ずスタッフ様が内容を確認してから「承認」する仕組みになっています。また、間違えやすい内容はログを確認してFAQを修正することで、精度を向上させることができます。'
+        },
+        {
+            q: '通知は誰に届きますか？',
+            a: 'メール通知は複数のアドレスを登録できるため、スタッフ全員で共有可能です。LINE通知は、連携した個人のアカウントに届きます。院内の共有端末でLINE連携を行えば、端末を持っているスタッフ全員で確認することも可能です。'
+        },
+        {
+            q: '忙しい時間帯だけAIに任せることはできますか？',
+            a: 'はい、可能です。電話機の転送設定をオン/オフするだけで切り替えられます。「診療中だけ転送する」「お昼休みだけ転送する」といった使い方ができます。'
+        },
+        {
+            q: 'どれくらいで始められますか？',
+            a: 'アカウント登録から初期設定まで、早ければ30分程度で完了します。電話機の転送設定を行えば、その日からすぐにご利用いただけます。'
+        },
+    ];
+
+    return (
+        <section className="py-24 bg-gray-50">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-16">
+                    <h2 className="text-indigo-600 font-semibold tracking-wide uppercase text-sm">FAQ</h2>
+                    <p className="mt-2 text-3xl font-extrabold text-navy-950 sm:text-4xl">
+                        よくあるご質問
+                    </p>
+                </div>
+
+                <div className="space-y-6">
+                    {faqs.map((item, index) => (
+                        <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
+                            <h3 className="text-lg font-bold text-navy-900 mb-4 flex items-start gap-4">
+                                <span className="text-teal-500 font-mono text-xl">Q.</span>
+                                <span>{item.q}</span>
+                            </h3>
+                            <div className="flex items-start gap-4">
+                                <span className="text-indigo-500 font-mono text-xl font-bold">A.</span>
+                                <p className="text-gray-600 leading-relaxed">
+                                    {item.a}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+---
+---
+File: web/src/components/lp/Features.tsx
+import { Settings, ListChecks, Bell, LayoutTemplate, History, Check, MessageSquare } from 'lucide-react';
+
+export default function Features() {
+    const features = [
+        {
+            title: 'AI応対カスタム',
+            subtitle: 'Customize',
+            description: '院のブランドに合わせて、AIの話し方や対応ルールを自由に設定。休診日やアクセスなどの質問にも、あなたの代わりに正確に答えます。',
+            points: ['話し方（丁寧/親しみ）', '第一声のカスタマイズ', 'FAQ登録（診療時間など）', 'SMSテンプレート'],
+            icon: Settings,
+            color: 'teal',
+            visual: (
+                <div className="w-full h-full bg-slate-50 rounded-xl border border-gray-200 p-4 shadow-sm relative overflow-hidden">
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                            <span className="text-sm font-semibold text-gray-700">AI設定</span>
+                            <div className="w-8 h-4 bg-teal-100 rounded-full relative">
+                                <div className="absolute right-1 top-0.5 w-3 h-3 bg-teal-500 rounded-full"></div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="text-xs text-gray-500">話し方</div>
+                            <div className="flex gap-2">
+                                <span className="px-3 py-1 bg-teal-50 text-teal-600 text-xs rounded-full border border-teal-100 font-medium">丁寧</span>
+                                <span className="px-3 py-1 bg-white text-gray-400 text-xs rounded-full border border-gray-100">フレンドリー</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="text-xs text-gray-500">第一声</div>
+                            <div className="bg-white p-2 rounded border border-gray-200 text-xs text-gray-600">
+                                お電話ありがとうございます。〇〇クリニックです...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )
+        },
+        {
+            title: '予約管理',
+            subtitle: 'Management',
+            description: '予約リクエストは管理画面に自動で集約。内容を確認して「承認」ボタンを押すだけで、予約が確定します。',
+            points: ['ステータス管理', '希望日時・人数確認', '患者向けメッセージ機能', '承認・却下フロー'],
+            icon: ListChecks,
+            color: 'indigo',
+            visual: (
+                <div className="w-full h-full bg-slate-50 rounded-xl border border-gray-200 p-4 shadow-sm">
+                    <div className="space-y-2">
+                        <div className="bg-white p-3 rounded-lg border border-indigo-100 shadow-sm flex items-start gap-3">
+                            <div className="bg-indigo-50 p-2 rounded text-indigo-500">
+                                <ListChecks className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-xs font-bold text-gray-700">佐藤 様</span>
+                                    <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">未承認</span>
+                                </div>
+                                <p className="text-[10px] text-gray-500">10月24日(月) 10:00 - 初診</p>
+                            </div>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg border border-gray-100 opacity-60 flex items-start gap-3">
+                            <div className="bg-gray-50 p-2 rounded text-gray-400">
+                                <ListChecks className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-xs font-bold text-gray-600">鈴木 様</span>
+                                    <span className="text-[10px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded">確定済</span>
+                                </div>
+                                <p className="text-[10px] text-gray-500">10月24日(月) 14:00 - 再診</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-3 flex gap-2">
+                        <button className="flex-1 bg-indigo-600 text-white text-[10px] py-1.5 rounded shadow-sm hover:bg-indigo-700">承認</button>
+                        <button className="flex-1 bg-white text-gray-500 text-[10px] py-1.5 rounded border border-gray-200">却下</button>
+                    </div>
+                </div>
+            )
+        },
+        {
+            title: '通知機能',
+            subtitle: 'Notification',
+            description: '予約が入ったら、メールやLINEで即座に通知。個人のLINEとも連携できるので、外出先でも状況を確認できます。',
+            points: ['複数メールアドレス登録', 'LINE連携（個人・グループ）', 'リアルタイム通知'],
+            icon: Bell,
+            color: 'emerald',
+            visual: (
+                <div className="w-full h-full bg-slate-50 rounded-xl border border-gray-200 p-4 shadow-sm flex items-center justify-center relative">
+                    <div className="absolute top-4 right-4 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    <div className="w-48 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                        <div className="bg-[#06C755] p-3 flex items-center gap-2">
+                            <div className="w-4 h-4 bg-white/20 rounded-full"></div>
+                            <span className="text-white text-xs font-bold">LINE Notification</span>
+                        </div>
+                        <div className="p-3">
+                            <div className="bg-gray-100 rounded-lg p-2 text-[10px] text-gray-600">
+                                <p className="font-bold mb-1">新規予約リクエスト</p>
+                                <p>佐藤様から予約の申請がありました。</p>
+                                <p className="text-gray-400 mt-1">10:24</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )
+        },
+        {
+            title: '予約フォーム設定',
+            subtitle: 'Form Builder',
+            description: '「初診/再診」「希望日時」「症状のメモ」など、クリニックに必要なヒアリング項目を自由に設定できます。',
+            points: ['項目の追加・削除', '必須/任意の切り替え', '選択肢の編集', 'ドラッグ&ドロップ並べ替え'],
+            icon: LayoutTemplate,
+            color: 'rose',
+            visual: (
+                <div className="w-full h-full bg-slate-50 rounded-xl border border-gray-200 p-4 shadow-sm">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded border-l-4 border-l-rose-400">
+                            <div className="w-4 h-4 bg-gray-100 rounded text-gray-400 flex items-center justify-center text-[8px]">::</div>
+                            <div className="flex-1">
+                                <div className="h-2 w-16 bg-gray-200 rounded mb-1"></div>
+                                <div className="h-1.5 w-10 bg-gray-100 rounded"></div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 bg-white border border-gray-200 rounded border-l-4 border-l-rose-400">
+                            <div className="w-4 h-4 bg-gray-100 rounded text-gray-400 flex items-center justify-center text-[8px]">::</div>
+                            <div className="flex-1">
+                                <div className="h-2 w-20 bg-gray-200 rounded mb-1"></div>
+                                <div className="flex gap-1 mt-1">
+                                    <div className="h-1.5 w-8 bg-gray-100 rounded"></div>
+                                    <div className="h-1.5 w-8 bg-gray-100 rounded"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex justify-center mt-2">
+                            <div className="text-[10px] text-rose-500 font-medium border border-rose-200 px-2 py-1 rounded bg-rose-50">+ 項目を追加</div>
+                        </div>
+                    </div>
+                </div>
+            )
+        },
+        {
+            title: '通話履歴・要約',
+            subtitle: 'Log & Summary',
+            description: '通話の内容はAIが自動で要約。聞き逃しがあっても、後から文字と音声で確認できるので安心です。',
+            points: ['通話音声の再生', 'AIによる自動要約', 'キーワード検索', '会話ログの閲覧'],
+            icon: History,
+            color: 'cyan',
+            visual: (
+                <div className="w-full h-full bg-slate-50 rounded-xl border border-gray-200 p-4 shadow-sm">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">要約</span>
+                            <p className="text-[10px] text-gray-700 font-medium">予約の変更依頼。来週水曜15時希望。</p>
+                        </div>
+                        <div className="h-px bg-gray-100"></div>
+                        <div className="space-y-2">
+                            <div className="flex gap-2">
+                                <div className="w-5 h-5 rounded-full bg-gray-200 flex-shrink-0"></div>
+                                <div className="bg-white border border-gray-200 p-2 rounded-lg rounded-tl-none text-[10px] text-gray-600 w-3/4">
+                                    来週の予約を変更したいのですが...
+                                </div>
+                            </div>
+                            <div className="flex gap-2 flex-row-reverse">
+                                <div className="w-5 h-5 rounded-full bg-cyan-100 flex-shrink-0"></div>
+                                <div className="bg-cyan-50 border border-cyan-100 p-2 rounded-lg rounded-tr-none text-[10px] text-cyan-800 w-3/4">
+                                    かしこまりました。ご希望の日時はございますか？
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )
+        },
+    ];
+
+    return (
+        <section className="py-32 bg-white relative overflow-hidden">
+            {/* Decorative Background Elements */}
+            <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-gray-50 to-transparent -z-10"></div>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-24">
+                    <h2 className="text-teal-600 font-semibold tracking-wide uppercase text-sm">Features</h2>
+                    <p className="mt-3 text-4xl font-extrabold text-navy-950 sm:text-5xl">
+                        現場に寄り添う、<br />確かな機能。
+                    </p>
+                    <p className="mt-4 text-xl text-gray-500 max-w-2xl mx-auto">
+                        クリニックの「あったらいいな」を詰め込みました。<br />
+                        設定はシンプル、機能はプロ仕様。
+                    </p>
+                </div>
+
+                <div className="space-y-32">
+                    {features.map((feature, index) => (
+                        <div key={index} className={`flex flex-col md:flex-row items-center gap-12 lg:gap-20 ${index % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
+
+                            {/* Text Side */}
+                            <div className="flex-1 space-y-6">
+                                <div className={`p-3 rounded-2xl w-fit ${feature.color === 'teal' ? 'bg-teal-100 text-teal-600' :
+                                        feature.color === 'indigo' ? 'bg-indigo-100 text-indigo-600' :
+                                            feature.color === 'emerald' ? 'bg-emerald-100 text-emerald-600' :
+                                                feature.color === 'rose' ? 'bg-rose-100 text-rose-600' :
+                                                    'bg-cyan-100 text-cyan-600'
+                                    }`}>
+                                    <feature.icon className="w-8 h-8" />
+                                </div>
+
+                                <div>
+                                    <span className="text-sm font-bold text-gray-400 uppercase tracking-wider">{feature.subtitle}</span>
+                                    <h3 className="text-3xl font-bold text-navy-900 mt-1 mb-4">{feature.title}</h3>
+                                    <p className="text-lg text-gray-600 leading-relaxed mb-6">
+                                        {feature.description}
+                                    </p>
+                                </div>
+
+                                <ul className="space-y-3">
+                                    {feature.points.map((point, i) => (
+                                        <li key={i} className="flex items-center gap-3">
+                                            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                                                <Check className="w-3 h-3" />
+                                            </div>
+                                            <span className="text-gray-700 font-medium">{point}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            {/* Visual Side */}
+                            <div className="flex-1 w-full">
+                                <div className="relative aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl bg-white border border-gray-100 transform rotate-1 hover:rotate-0 transition-transform duration-500">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-white"></div>
+                                    <div className="absolute inset-4 bg-white rounded-2xl shadow-inner overflow-hidden">
+                                        {/* Top Bar Mockup */}
+                                        <div className="h-8 bg-gray-50 border-b border-gray-100 flex items-center px-4 gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                                            <div className="w-2 h-2 rounded-full bg-amber-400"></div>
+                                            <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                                        </div>
+                                        {/* Visual Content */}
+                                        <div className="p-6 h-full">
+                                            {feature.visual}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+---
+---
+File: web/src/components/lp/Flow.tsx
+import { UserPlus, Settings, Layout, Bell, Rocket } from 'lucide-react';
+
+export default function Flow() {
+    const steps = [
+        {
+            icon: UserPlus,
+            title: '無料登録',
+            description: 'アカウントを作成します。クレジットカードは不要です。',
+        },
+        {
+            icon: Settings,
+            title: '院内情報・FAQ登録',
+            description: '診療時間や休診日、よくある質問への回答を入力します。',
+        },
+        {
+            icon: Layout,
+            title: '予約フォーム設定',
+            description: '電話でヒアリングしたい項目（希望日時など）を設定します。',
+        },
+        {
+            icon: Bell,
+            title: '通知設定',
+            description: '予約が入った際の通知先（メール・LINE）を設定します。',
+        },
+        {
+            icon: Rocket,
+            title: '転送設定・開始',
+            description: '電話機の転送設定をすれば、すぐにAI受付が開始されます。',
+        },
+    ];
+
+    return (
+        <section className="py-24 bg-navy-900 text-white relative overflow-hidden">
+            {/* Background decoration */}
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#4b5563_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div className="text-center mb-16">
+                    <h2 className="text-teal-400 font-semibold tracking-wide uppercase text-sm">How to start</h2>
+                    <p className="mt-2 text-3xl font-extrabold sm:text-4xl">
+                        導入はとても簡単です
+                    </p>
+                    <p className="mt-4 text-xl text-gray-400">
+                        最短即日でスタート。特別な機器の設置は必要ありません。
+                    </p>
+                </div>
+
+                <div className="relative">
+                    {/* Connecting Line (Desktop) */}
+                    <div className="hidden lg:block absolute top-12 left-[10%] right-[10%] h-0.5 bg-gray-700 -z-10"></div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+                        {steps.map((step, index) => (
+                            <div key={index} className="relative flex flex-col items-center text-center group">
+                                <div className="w-24 h-24 rounded-2xl bg-navy-800 border border-gray-700 flex items-center justify-center shadow-lg mb-6 group-hover:border-teal-500/50 group-hover:bg-navy-800/80 transition-all z-10">
+                                    <step.icon className="h-8 w-8 text-teal-400" />
+                                    <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-navy-950 border border-gray-700 flex items-center justify-center text-sm font-bold text-gray-400 group-hover:text-teal-400 group-hover:border-teal-500 transition-colors">
+                                        {index + 1}
+                                    </div>
+                                </div>
+                                <h3 className="text-lg font-bold text-white mb-2">{step.title}</h3>
+                                <p className="text-sm text-gray-400 leading-relaxed px-2">
+                                    {step.description}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+---
+---
+File: web/src/components/lp/Footer.tsx
+import Link from 'next/link';
+
+export default function Footer() {
+    return (
+        <footer className="bg-navy-950 text-white border-t border-white/10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                    <div className="col-span-2 md:col-span-1">
+                        <span className="text-2xl font-bold tracking-tighter text-white">AiLuna</span>
+                        <p className="mt-4 text-sm text-gray-400">
+                            クリニックのための<br />AI電話受付サービス
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">Product</h3>
+                        <ul className="mt-4 space-y-4">
+                            <li><a href="#" className="text-base text-gray-400 hover:text-white transition-colors">機能一覧</a></li>
+                            <li><a href="#" className="text-base text-gray-400 hover:text-white transition-colors">料金プラン</a></li>
+                            <li><a href="#" className="text-base text-gray-400 hover:text-white transition-colors">導入事例</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">Support</h3>
+                        <ul className="mt-4 space-y-4">
+                            <li><a href="#" className="text-base text-gray-400 hover:text-white transition-colors">ヘルプセンター</a></li>
+                            <li><a href="#" className="text-base text-gray-400 hover:text-white transition-colors">お問い合わせ</a></li>
+                            <li><a href="#" className="text-base text-gray-400 hover:text-white transition-colors">運営会社</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">Legal</h3>
+                        <ul className="mt-4 space-y-4">
+                            <li><Link href="/terms" className="text-base text-gray-400 hover:text-white transition-colors">利用規約</Link></li>
+                            <li><Link href="/privacy" className="text-base text-gray-400 hover:text-white transition-colors">プライバシーポリシー</Link></li>
+                            <li><Link href="#" className="text-base text-gray-400 hover:text-white transition-colors">特定商取引法に基づく表記</Link></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div className="mt-12 border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <p className="text-sm text-gray-500">
+                        &copy; 2025 AiLuna. All rights reserved.
+                    </p>
+                    <div className="flex gap-4">
+                        {/* Social Icons if needed */}
+                    </div>
+                </div>
+            </div>
+        </footer>
+    );
+}
+
+---
+---
+File: web/src/components/lp/Hero.tsx
+import Link from 'next/link';
+import { ArrowRight, Phone, Calendar, check } from 'lucide-react';
+
+export default function Hero() {
+  return (
+    <section className="relative overflow-hidden bg-navy-950 text-white pt-24 pb-16 sm:pt-32 sm:pb-24 lg:pb-32">
+      {/* Background Effects */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-teal-400/10 rounded-full blur-[120px]" />
+        <div className="absolute top-[20%] left-[20%] w-[300px] h-[300px] bg-coral-500/10 rounded-full blur-[80px]" />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-center">
+          
+          {/* Text Content */}
+          <div className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
+            <div className="inline-flex items-center px-3 py-1 rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300 text-sm font-medium mb-6">
+              <span className="flex h-2 w-2 rounded-full bg-teal-400 mr-2 animate-pulse"></span>
+              クリニック専用 AI電話受付
+            </div>
+            <h1 className="text-4xl tracking-tight font-extrabold text-white sm:text-5xl md:text-6xl lg:leading-tight">
+              AI電話受付で、<br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-indigo-400">
+                予約対応をなめらかに。
+              </span>
+            </h1>
+            <p className="mt-6 text-base text-gray-300 sm:mt-8 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-8 md:text-xl lg:mx-0">
+              電話予約と問い合わせをAIが受付。予約内容は管理画面に集約、スタッフは確認して確定するだけ。
+              <br className="hidden lg:inline" />診療中の電話対応をゼロに。
+            </p>
+            <div className="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0 flex flex-col sm:flex-row gap-4">
+              <Link
+                href="/login?mode=signup"
+                className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-lg text-navy-950 bg-teal-400 hover:bg-teal-300 transition-all shadow-lg shadow-teal-400/20 hover:shadow-teal-400/40"
+              >
+                無料で試す
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+              <Link
+                href="https://calendar.app.google/xxxxx" // Placeholder or actual link if known
+                className="inline-flex items-center justify-center px-8 py-3 border border-gray-600 text-base font-medium rounded-lg text-gray-300 hover:bg-white/5 transition-all"
+              >
+                導入相談 (15分)
+              </Link>
+            </div>
+            
+            <p className="mt-4 text-sm text-gray-400">
+              ※ クレジットカード登録不要、即日利用可能
+            </p>
+          </div>
+
+          {/* Visual Content */}
+          <div className="mt-12 relative sm:max-w-lg sm:mx-auto lg:mt-0 lg:max-w-none lg:mx-0 lg:col-span-6 lg:flex lg:items-center">
+            <div className="relative mx-auto w-full rounded-2xl shadow-2xl lg:max-w-md overflow-hidden border border-white/10 bg-navy-900/50 backdrop-blur-sm">
+              <div className="p-1 bg-gradient-to-br from-white/10 to-transparent">
+                <div className="bg-navy-900 rounded-xl overflow-hidden relative">
+                  {/* Mock UI Header */}
+                  <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-navy-950/50">
+                    <div className="flex items-center gap-2">
+                       <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                       <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                       <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                    </div>
+                    <div className="text-xs text-gray-500 font-mono">AiLuna Admin</div>
+                  </div>
+
+                  {/* Mock UI Body */}
+                  <div className="p-4 space-y-4">
+                    {/* Incoming Call Card */}
+                    <div className="flex items-start gap-4 p-4 rounded-lg bg-navy-800/50 border border-teal-500/20 relative overflow-hidden group">
+                      <div className="absolute left-0 top-0 w-1 h-full bg-teal-500"></div>
+                      <div className="h-10 w-10 rounded-full bg-teal-500/20 flex items-center justify-center flex-shrink-0 text-teal-400">
+                        <Phone className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                           <p className="text-sm font-medium text-white">新規予約リクエスト</p>
+                           <span className="text-xs text-gray-400">たった今</span>
+                        </div>
+                        <p className="text-xs text-gray-300 mt-1">佐藤 様 (初診)</p>
+                        <div className="mt-2 text-xs text-gray-400 bg-navy-950/50 p-2 rounded border border-white/5">
+                          「来週火曜日の10時から、虫歯の治療をお願いしたいのですが...」
+                        </div>
+                      </div>
+                    </div>
+
+                     {/* Confirmed Reservation */}
+                     <div className="flex items-start gap-4 p-4 rounded-lg bg-navy-800/30 border border-white/5 opacity-60">
+                      <div className="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0 text-indigo-400">
+                        <Calendar className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                           <p className="text-sm font-medium text-white">田中 様 (再診)</p>
+                           <span className="text-xs text-gray-400">10分前</span>
+                        </div>
+                         <div className="mt-2 flex items-center gap-2">
+                             <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/20 text-green-400 border border-green-500/20">確定済み</span>
+                             <span className="text-xs text-gray-500">SMS送信完了</span>
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Floating Notification */}
+                  <div className="absolute bottom-4 right-4 bg-white text-navy-950 px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-subtle">
+                     <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></div>
+                     <div className="text-sm font-bold">予約が確定しました</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Decorative Elements around Visual */}
+             <div className="absolute -z-10 top-[-20px] right-[-20px] w-24 h-24 bg-dots-pattern opacity-20"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+---
+---
+File: web/src/components/lp/Pricing.tsx
+import Link from 'next/link';
+import { Check, ArrowRight, HelpCircle } from 'lucide-react';
+
+export default function Pricing() {
+    return (
+        <section className="py-24 bg-white relative">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-16">
+                    <h2 className="text-teal-600 font-semibold tracking-wide uppercase text-sm">Pricing</h2>
+                    <p className="mt-2 text-3xl font-extrabold text-navy-950 sm:text-4xl">
+                        シンプルで明確な料金プラン
+                    </p>
+                    <p className="mt-4 text-xl text-gray-500">
+                        初期費用・解約金は一切かかりません。
+                    </p>
+                </div>
+
+                <div className="max-w-lg mx-auto bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden relative">
+                    <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-teal-400 to-indigo-500"></div>
+
+                    <div className="p-8 sm:p-10">
+                        <h3 className="text-lg font-medium text-gray-900 border-b border-gray-100 pb-4 mb-6">スタンダードプラン</h3>
+
+                        <div className="flex items-baseline gap-2 mb-2">
+                            <span className="text-5xl font-extrabold text-navy-900">14,900</span>
+                            <span className="text-xl font-medium text-gray-500">円 / 月</span>
+                        </div>
+                        <p className="text-sm text-gray-500 mb-8">(税込 16,390円)</p>
+
+                        <div className="bg-gray-50 rounded-xl p-4 mb-8 border border-gray-100">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-sm font-medium text-gray-700">従量課金</span>
+                                <span className="text-lg font-bold text-navy-900">20円 <span className="text-sm font-normal text-gray-500">/ 分</span></span>
+                            </div>
+                            <p className="text-xs text-gray-500 text-right">(税込 22円 / 分)</p>
+                        </div>
+
+                        <ul className="space-y-4 mb-8">
+                            {[
+                                'AI電話対応（24時間365日）',
+                                '予約管理画面の利用',
+                                '通話ログ・要約機能',
+                                'SMS送信機能',
+                                'LINE通知連携',
+                                '専門スタッフによる導入サポート'
+                            ].map((item, i) => (
+                                <li key={i} className="flex items-start gap-3">
+                                    <Check className="h-5 w-5 text-teal-500 flex-shrink-0" />
+                                    <span className="text-gray-600">{item}</span>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <div className="space-y-4">
+                            <Link
+                                href="/login?mode=signup"
+                                className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-bold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg transition-all shadow-lg shadow-indigo-200"
+                            >
+                                無料でアカウント作成
+                                <ArrowRight className="ml-2 h-5 w-5" />
+                            </Link>
+                            <Link
+                                href="https://calendar.app.google/xxxxx" // Placeholder
+                                className="w-full flex items-center justify-center px-8 py-3 border border-gray-200 text-base font-medium rounded-xl text-navy-900 bg-white hover:bg-gray-50 md:py-4 transition-all"
+                            >
+                                導入相談 (15分)
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-8 text-center">
+                    <Link href="#" className="text-sm text-gray-500 hover:text-indigo-600 flex items-center justify-center gap-1">
+                        <HelpCircle className="w-4 h-4" />
+                        お支払い方法について
+                    </Link>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+---
+---
+File: web/src/components/lp/Problem.tsx
+import { PhoneMissed, Clock, Users, FileText } from 'lucide-react';
+
+export default function Problem() {
+    const problems = [
+        {
+            icon: PhoneMissed,
+            title: '予約の取りこぼし',
+            description: '診療中や休診日は電話に出られず、せっかくの初診予約や問い合わせを逃してしまう。',
+            color: 'text-rose-500',
+            bg: 'bg-rose-50',
+        },
+        {
+            icon: Clock,
+            title: '受付業務の圧迫',
+            description: '電話対応で受付スタッフの手が止まり、目の前の患者様の会計や案内が遅れてしまう。',
+            color: 'text-orange-500',
+            bg: 'bg-orange-50',
+        },
+        {
+            icon: Users,
+            title: '対応の属人化',
+            description: 'スタッフによってヒアリング内容にバラつきがあり、必要な情報が漏れてしまうことがある。',
+            color: 'text-amber-500',
+            bg: 'bg-amber-50',
+        },
+        {
+            icon: FileText,
+            title: '言った言わない問題',
+            description: '電話の内容が記録に残らないため、聞き間違いや伝言ミスによるトラブルが発生する。',
+            color: 'text-slate-500',
+            bg: 'bg-slate-50',
+        },
+    ];
+
+    return (
+        <section className="py-24 bg-white relative">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center max-w-3xl mx-auto mb-16">
+                    <h2 className="text-base text-indigo-600 font-semibold tracking-wide uppercase">
+                        Current Issues
+                    </h2>
+                    <p className="mt-2 text-3xl font-extrabold text-gray-900 sm:text-4xl">
+                        日々の電話対応で、<br />こんな <span className="text-rose-500 underline decoration-rose-200 decoration-4 underline-offset-4">お悩み</span> はありませんか？
+                    </p>
+                    <p className="mt-4 text-xl text-gray-500">
+                        クリニックの現場では、電話対応が本来の業務を圧迫しています。
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {problems.map((item, index) => (
+                        <div
+                            key={index}
+                            className="group bg-white rounded-2xl p-8 shadow-sm hover:shadow-xl transition-shadow border border-gray-100"
+                        >
+                            <div className={`w-14 h-14 rounded-xl ${item.bg} ${item.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                                <item.icon className="h-7 w-7" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors">
+                                {item.title}
+                            </h3>
+                            <p className="text-gray-600 leading-relaxed text-sm">
+                                {item.description}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+---
+---
+File: web/src/components/lp/Reasons.tsx
+import { ShieldCheck, Eye, Sparkles } from 'lucide-react';
+
+export default function Reasons() {
+    const reasons = [
+        {
+            title: 'AIが受け、人が確定する安心感',
+            description: 'AIに全てを任せるのではなく、最終的な予約確定はスタッフが行います。勝手に予約が入る心配がなく、運用の主導権は常にクリニック側にあります。',
+            icon: ShieldCheck,
+        },
+        {
+            title: 'ログが見える、言った言わないを防ぐ',
+            description: '通話内容は全てテキストと録音で保存されます。「電話でこう言ったはず」というトラブルを未然に防ぎ、スムーズな引き継ぎが可能になります。',
+            icon: Eye,
+        },
+        {
+            title: '院内ルールを固定化、品質を標準化',
+            description: '新人スタッフでもベテランでも、AIなら同じ品質で対応します。院のルールをAIに教え込むことで、常に丁寧で正確な案内を実現します。',
+            icon: Sparkles,
+        },
+    ];
+
+    return (
+        <section className="py-24 bg-navy-950 relative overflow-hidden text-white">
+            {/* Background Shapes */}
+            <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-900/20 rounded-full blur-[100px]" />
+            <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-teal-900/20 rounded-full blur-[100px]" />
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div className="text-center mb-16">
+                    <h2 className="text-teal-400 font-semibold tracking-wide uppercase text-sm">Why AiLuna?</h2>
+                    <p className="mt-2 text-3xl font-extrabold sm:text-4xl">
+                        選ばれる<span className="text-teal-400">3つの理由</span>
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                    {reasons.map((reason, index) => (
+                        <div key={index} className="bg-white/5 backdrop-blur-sm border border-white/10 p-8 rounded-2xl hover:bg-white/10 transition-colors">
+                            <div className="w-14 h-14 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center mb-6">
+                                <reason.icon className="h-7 w-7" />
+                            </div>
+                            <h3 className="text-xl font-bold mb-4">{reason.title}</h3>
+                            <p className="text-gray-400 leading-relaxed text-sm">
+                                {reason.description}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+---
+---
+File: web/src/components/lp/Solution.tsx
+import { Bot, Laptop, CheckCircle2, ArrowRight } from 'lucide-react';
+
+export default function Solution() {
+    return (
+        <section className="py-24 bg-gradient-to-b from-indigo-50 to-white overflow-hidden relative">
+            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-indigo-200 to-transparent"></div>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-16">
+                    <h2 className="text-base text-teal-600 font-semibold tracking-wide uppercase">
+                        Our Solution
+                    </h2>
+                    <p className="mt-2 text-3xl font-extrabold text-navy-900 sm:text-4xl">
+                        AiLunaなら、<br />電話対応は<span className="text-indigo-600">「確認するだけ」</span>へ。
+                    </p>
+                </div>
+
+                <div className="relative">
+                    {/* Connecting Line (Desktop) */}
+                    <div className="hidden md:block absolute top-[15%] left-[10%] right-[10%] h-0.5 bg-gray-200 -z-10"></div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
+                        {/* Step 1 */}
+                        <div className="relative flex flex-col items-center text-center">
+                            <div className="w-24 h-24 rounded-full bg-white border-4 border-indigo-100 flex items-center justify-center shadow-lg mb-6 z-10">
+                                <Bot className="h-10 w-10 text-indigo-600" />
+                                <div className="absolute -top-2 -right-2 bg-indigo-600 text-white text-sm font-bold w-8 h-8 rounded-full flex items-center justify-center border-2 border-white">
+                                    1
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-bold text-navy-900 mb-3">AIが電話を受付</h3>
+                            <p className="text-gray-600 max-w-xs mx-auto">
+                                予約や質問にAIが自動で応対します。<br />24時間365日、取りこぼしゼロへ。
+                            </p>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div className="relative flex flex-col items-center text-center">
+                            {/* Mobile Arrow */}
+                            <div className="md:hidden mb-8 text-gray-300 transform rotate-90">
+                                <ArrowRight className="h-8 w-8" />
+                            </div>
+
+                            <div className="w-24 h-24 rounded-full bg-white border-4 border-teal-100 flex items-center justify-center shadow-lg mb-6 z-10">
+                                <Laptop className="h-10 w-10 text-teal-500" />
+                                <div className="absolute -top-2 -right-2 bg-teal-500 text-white text-sm font-bold w-8 h-8 rounded-full flex items-center justify-center border-2 border-white">
+                                    2
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-bold text-navy-900 mb-3">管理画面に集約</h3>
+                            <p className="text-gray-600 max-w-xs mx-auto">
+                                会話内容は文字起こしされ、<br />予約リストに自動で追加されます。
+                            </p>
+                        </div>
+
+                        {/* Step 3 */}
+                        <div className="relative flex flex-col items-center text-center">
+                            {/* Mobile Arrow */}
+                            <div className="md:hidden mb-8 text-gray-300 transform rotate-90">
+                                <ArrowRight className="h-8 w-8" />
+                            </div>
+
+                            <div className="w-24 h-24 rounded-full bg-white border-4 border-coral-100 flex items-center justify-center shadow-lg mb-6 z-10">
+                                <CheckCircle2 className="h-10 w-10 text-coral-500" />
+                                <div className="absolute -top-2 -right-2 bg-coral-500 text-white text-sm font-bold w-8 h-8 rounded-full flex items-center justify-center border-2 border-white">
+                                    3
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-bold text-navy-900 mb-3">承認して確定</h3>
+                            <p className="text-gray-600 max-w-xs mx-auto">
+                                スタッフは内容を確認し、ボタンを押すだけ。<br />患者様へSMSで通知も可能です。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+---
+---
+File: web/src/components/lp/UseCases.tsx
+import { Stethoscope, CalendarClock, MessageCircleQuestion } from 'lucide-react';
+
+export default function UseCases() {
+    const cases = [
+        {
+            title: '初診予約',
+            scene: 'Scene 01',
+            description: '希望日時や症状のヒアリングを自動化。「いつ・誰が・どんな症状で」来るかが事前にわかるので、準備がスムーズに。',
+            icon: Stethoscope,
+            accent: 'border-l-teal-500',
+        },
+        {
+            title: '予約変更・キャンセル',
+            scene: 'Scene 02',
+            description: '「明日の予約を変更したい」といった電話もAIが一次受付。スタッフは空き状況を確認して、折り返し連絡するだけで完了します。',
+            icon: CalendarClock,
+            accent: 'border-l-indigo-500',
+        },
+        {
+            title: 'よくある問い合わせ',
+            scene: 'Scene 03',
+            description: '「駐車場はありますか？」「今の時間は混んでますか？」といった定型質問には、AIが即座に回答。電話対応の数を劇的に減らします。',
+            icon: MessageCircleQuestion,
+            accent: 'border-l-coral-500',
+        },
+    ];
+
+    return (
+        <section className="py-24 bg-gray-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-16">
+                    <h2 className="text-indigo-600 font-semibold tracking-wide uppercase text-sm">Use Cases</h2>
+                    <p className="mt-2 text-3xl font-extrabold text-navy-950 sm:text-4xl">
+                        こんな場面で活躍します
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {cases.map((item, index) => (
+                        <div key={index} className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative group hover:shadow-lg transition-shadow`}>
+                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${item.accent.replace('border-l-', 'bg-')}`}></div>
+                            <div className="p-8">
+                                <div className="flex justify-between items-start mb-4">
+                                    <span className="text-xs font-mono text-gray-400">{item.scene}</span>
+                                    <item.icon className="h-6 w-6 text-gray-400 group-hover:text-navy-900 transition-colors" />
+                                </div>
+                                <h3 className="text-xl font-bold text-navy-900 mb-3">{item.title}</h3>
+                                <p className="text-gray-600 text-sm leading-relaxed">
+                                    {item.description}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
 }
 
 ---
