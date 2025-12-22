@@ -137,9 +137,18 @@ export async function fetchCallMetrics(): Promise<CallMetrics> {
 }
 
 /**
+ * TranscriptItem型（ConversationViewerと共通）
+ */
+export type TranscriptItem = {
+    role: 'user' | 'assistant'
+    text: string
+    timestamp: string
+}
+
+/**
  * 展開時にトランスクリプトを個別取得（遅延ロード）
  */
-export async function fetchCallTranscript(callId: string): Promise<string | null> {
+export async function fetchCallTranscript(callId: string): Promise<TranscriptItem[] | null> {
     const supabase = await createClient()
     const {
         data: { user },

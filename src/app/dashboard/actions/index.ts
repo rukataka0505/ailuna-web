@@ -17,9 +17,11 @@ export {
 export {
     fetchUniqueCallerNumbers,
     fetchCallLogsPaginated,
+    fetchCallTranscript,
     fetchCallMetrics,
     type FilterParams,
     type CallMetrics,
+    type TranscriptItem,
 } from './calls'
 
 // Reservation form fields

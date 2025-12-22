@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { ChevronDown, Phone, Loader2, Search, X, Calendar, User, Filter } from 'lucide-react'
-import { ConversationViewer, TranscriptItem } from './ConversationViewer'
-import { fetchCallLogsPaginated } from '@/app/dashboard/actions'
+import { ConversationViewer } from './ConversationViewer'
+import { fetchCallLogsPaginated, fetchCallTranscript, type TranscriptItem } from '@/app/dashboard/actions'
 
 type CallLog = {
     id: string
@@ -38,9 +38,39 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
     const [loading, setLoading] = useState(false)
     const [expandedId, setExpandedId] = useState<string | null>(null)
     const [isFilterOpen, setIsFilterOpen] = useState(false)
+    const [transcriptLoadingId, setTranscriptLoadingId] = useState<string | null>(null)
 
-    const toggleExpand = (id: string) => {
-        setExpandedId(expandedId === id ? null : id)
+    const toggleExpand = async (id: string) => {
+        // If already expanded, collapse
+        if (expandedId === id) {
+            setExpandedId(null)
+            return
+        }
+
+        // Expand the item
+        setExpandedId(id)
+
+        // Find the log
+        const log = logs.find(l => l.id === id)
+
+        // If transcript is not loaded yet, fetch it
+        if (log && log.transcript === undefined) {
+            setTranscriptLoadingId(id)
+            try {
+                const transcript = await fetchCallTranscript(id)
+                setLogs(prev => prev.map(l =>
+                    l.id === id ? { ...l, transcript: transcript ?? [] } : l
+                ))
+            } catch (error) {
+                console.error('Failed to fetch transcript:', error)
+                // Set empty array to avoid refetching on error
+                setLogs(prev => prev.map(l =>
+                    l.id === id ? { ...l, transcript: [] } : l
+                ))
+            } finally {
+                setTranscriptLoadingId(null)
+            }
+        }
     }
 
     const formatDate = (dateString: string) => {
@@ -285,7 +315,14 @@ export function CallLogList({ initialLogs, initialCount, uniqueCallers }: CallLo
                                                 <span className="font-medium">Call ID:</span> {log.call_sid}
                                             </div>
                                         )}
-                                        <ConversationViewer transcript={log.transcript || []} />
+                                        {transcriptLoadingId === log.id ? (
+                                            <div className="flex items-center justify-center py-8 text-zinc-500">
+                                                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                                                <span className="text-sm">会話ログを読み込み中...</span>
+                                            </div>
+                                        ) : (
+                                            <ConversationViewer transcript={log.transcript || []} />
+                                        )}
                                     </div>
                                 )}
                             </div>
