@@ -236,7 +236,7 @@ export default function DemoCallPage() {
                                     <span>接続しています...</span>
                                 </div>
                             ) : status === 'connected' ? (
-                                <span>話しかけてみてください...</span>
+                                <span>お待ちください...</span>
                             ) : callEnded ? (
                                 <span>通話が終了しました</span>
                             ) : (
