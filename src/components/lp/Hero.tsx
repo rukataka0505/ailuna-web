@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, Phone, Calendar, check } from 'lucide-react';
+import { ArrowRight, Phone, Calendar, Check } from 'lucide-react';
 
 export default function Hero() {
   return (
@@ -13,7 +13,7 @@ export default function Hero() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-center">
-          
+
           {/* Text Content */}
           <div className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
             <div className="inline-flex items-center px-3 py-1 rounded-full border border-teal-400/30 bg-teal-400/10 text-teal-300 text-sm font-medium mb-6">
@@ -45,7 +45,7 @@ export default function Hero() {
                 導入相談 (15分)
               </Link>
             </div>
-            
+
             <p className="mt-4 text-sm text-gray-400">
               ※ クレジットカード登録不要、即日利用可能
             </p>
@@ -59,9 +59,9 @@ export default function Hero() {
                   {/* Mock UI Header */}
                   <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-navy-950/50">
                     <div className="flex items-center gap-2">
-                       <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                       <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                       <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                      <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                      <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                      <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
                     </div>
                     <div className="text-xs text-gray-500 font-mono">AiLuna Admin</div>
                   </div>
@@ -76,8 +76,8 @@ export default function Hero() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                           <p className="text-sm font-medium text-white">新規予約リクエスト</p>
-                           <span className="text-xs text-gray-400">たった今</span>
+                          <p className="text-sm font-medium text-white">新規予約リクエスト</p>
+                          <span className="text-xs text-gray-400">たった今</span>
                         </div>
                         <p className="text-xs text-gray-300 mt-1">佐藤 様 (初診)</p>
                         <div className="mt-2 text-xs text-gray-400 bg-navy-950/50 p-2 rounded border border-white/5">
@@ -86,35 +86,35 @@ export default function Hero() {
                       </div>
                     </div>
 
-                     {/* Confirmed Reservation */}
-                     <div className="flex items-start gap-4 p-4 rounded-lg bg-navy-800/30 border border-white/5 opacity-60">
+                    {/* Confirmed Reservation */}
+                    <div className="flex items-start gap-4 p-4 rounded-lg bg-navy-800/30 border border-white/5 opacity-60">
                       <div className="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0 text-indigo-400">
                         <Calendar className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                           <p className="text-sm font-medium text-white">田中 様 (再診)</p>
-                           <span className="text-xs text-gray-400">10分前</span>
+                          <p className="text-sm font-medium text-white">田中 様 (再診)</p>
+                          <span className="text-xs text-gray-400">10分前</span>
                         </div>
-                         <div className="mt-2 flex items-center gap-2">
-                             <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/20 text-green-400 border border-green-500/20">確定済み</span>
-                             <span className="text-xs text-gray-500">SMS送信完了</span>
-                         </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/20 text-green-400 border border-green-500/20">確定済み</span>
+                          <span className="text-xs text-gray-500">SMS送信完了</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Floating Notification */}
                   <div className="absolute bottom-4 right-4 bg-white text-navy-950 px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-subtle">
-                     <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></div>
-                     <div className="text-sm font-bold">予約が確定しました</div>
+                    <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></div>
+                    <div className="text-sm font-bold">予約が確定しました</div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Decorative Elements around Visual */}
-             <div className="absolute -z-10 top-[-20px] right-[-20px] w-24 h-24 bg-dots-pattern opacity-20"></div>
+            <div className="absolute -z-10 top-[-20px] right-[-20px] w-24 h-24 bg-dots-pattern opacity-20"></div>
           </div>
         </div>
       </div>
