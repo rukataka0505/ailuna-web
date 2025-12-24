@@ -15,7 +15,6 @@ export interface WebCallClientOptions {
     onTranscript?: (text: string, isFinal: boolean, speaker: 'user' | 'ai') => void
     onError?: (error: string) => void
     onCallEnded?: () => void
-    enableGreetingSuppression?: boolean
 }
 
 /**
@@ -45,21 +44,8 @@ export class WebCallClient {
     private callSid: string = ''
     private options: WebCallClientOptions
 
-    // Greeting suppression state
-    private isGreetingPhase = false
-    private lastMediaReceivedAt = 0
-    private greetingSafetyTimeoutId: ReturnType<typeof setTimeout> | null = null
-    private greetingUnlockTimeoutId: ReturnType<typeof setTimeout> | null = null
-
-    // Assistant speaking state (general conversation suppression)
-    private isAssistantSpeaking = false
-    private assistantUnlockTimeoutId: ReturnType<typeof setTimeout> | null = null
-
     constructor(options: WebCallClientOptions = {}) {
-        this.options = {
-            enableGreetingSuppression: true, // Default to true
-            ...options
-        }
+        this.options = options
         this.samplesPerChunk = (this.sampleRate * this.chunkMs) / 1000 // 160 samples at 8kHz
     }
 
@@ -81,20 +67,6 @@ export class WebCallClient {
 
         console.log('[WebCallClient] Starting with pre-acquired stream')
         this.setStatus('connecting')
-
-        // Initialize greeting suppression
-        this.isGreetingPhase = !!this.options.enableGreetingSuppression
-        this.lastMediaReceivedAt = 0
-        if (this.isGreetingPhase) {
-            console.log('[WebCallClient] Greeting suppression enabled. Audio input blocked until greeting finishes.')
-            // Safety timeout: Disable suppression after 5 seconds if audio never arrives or logic fails
-            this.greetingSafetyTimeoutId = setTimeout(() => {
-                if (this.isGreetingPhase) {
-                    console.log('[WebCallClient] Greeting safety timeout (5s). Unblocking audio.')
-                    this.isGreetingPhase = false
-                }
-            }, 5000)
-        }
 
         // Generate UUIDs for streamSid and callSid (client-side)
         this.streamSid = generateUUID()
@@ -157,26 +129,6 @@ export class WebCallClient {
                 onMarkPlayed: (markName) => {
                     // Send mark back to server when audio completes
                     this.sendMark(markName)
-                },
-                onQueueEmpty: () => {
-                    // Check if we should unlock greeting phase or assistant speaking
-                    if ((this.isGreetingPhase || this.isAssistantSpeaking) && this.lastMediaReceivedAt > 0) {
-                        // Prevent rapid unlocking if queue empties momentarily (jitter)
-                        // Wait 500ms to ensure no more audio is coming
-                        if (!this.assistantUnlockTimeoutId) {
-                            this.assistantUnlockTimeoutId = setTimeout(() => {
-                                const now = performance.now()
-                                const timeSinceLastMedia = now - this.lastMediaReceivedAt
-
-                                if (timeSinceLastMedia >= 500) {
-                                    console.log('[WebCallClient] Assistant playback finished (Queue empty + 500ms quiet). Unblocking audio.')
-                                    this.isGreetingPhase = false
-                                    this.isAssistantSpeaking = false
-                                }
-                                this.assistantUnlockTimeoutId = null
-                            }, 500)
-                        }
-                    }
                 }
             })
 
@@ -200,19 +152,6 @@ export class WebCallClient {
         }
 
         this.setStatus('connecting')
-
-        // Initialize greeting suppression
-        this.isGreetingPhase = !!this.options.enableGreetingSuppression
-        this.lastMediaReceivedAt = 0
-        if (this.isGreetingPhase) {
-            console.log('[WebCallClient] Greeting suppression enabled. Audio input blocked until greeting finishes.')
-            this.greetingSafetyTimeoutId = setTimeout(() => {
-                if (this.isGreetingPhase) {
-                    console.log('[WebCallClient] Greeting safety timeout (5s). Unblocking audio.')
-                    this.isGreetingPhase = false
-                }
-            }, 5000)
-        }
 
         // Generate UUIDs for streamSid and callSid (client-side)
         this.streamSid = generateUUID()
@@ -266,31 +205,10 @@ export class WebCallClient {
             }
 
             // Initialize audio player with mark callback
-            // Initialize audio player with mark callback
             this.audioPlayer = new AudioPlayer({
                 onMarkPlayed: (markName) => {
                     // Send mark back to server when audio completes
                     this.sendMark(markName)
-                },
-                onQueueEmpty: () => {
-                    // Check if we should unlock greeting phase or assistant speaking
-                    if ((this.isGreetingPhase || this.isAssistantSpeaking) && this.lastMediaReceivedAt > 0) {
-                        // Prevent rapid unlocking if queue empties momentarily (jitter)
-                        // Wait 500ms to ensure no more audio is coming
-                        if (!this.assistantUnlockTimeoutId) {
-                            this.assistantUnlockTimeoutId = setTimeout(() => {
-                                const now = performance.now()
-                                const timeSinceLastMedia = now - this.lastMediaReceivedAt
-
-                                if (timeSinceLastMedia >= 500) {
-                                    console.log('[WebCallClient] Assistant playback finished (Queue empty + 500ms quiet). Unblocking audio.')
-                                    this.isGreetingPhase = false
-                                    this.isAssistantSpeaking = false
-                                }
-                                this.assistantUnlockTimeoutId = null
-                            }, 500)
-                        }
-                    }
                 }
             })
 
@@ -379,16 +297,8 @@ export class WebCallClient {
             switch (message.event) {
                 case 'media':
                     // Play received audio (Twilio format: media.payload)
+                    // Always send mic audio; barge-in & greeting suppression are handled in call-engine.
                     if (message.media?.payload && this.audioPlayer) {
-                        this.lastMediaReceivedAt = performance.now()
-                        this.isAssistantSpeaking = true
-
-                        // If we received new media during unlock wait, cancel the unlock
-                        if (this.assistantUnlockTimeoutId) {
-                            clearTimeout(this.assistantUnlockTimeoutId)
-                            this.assistantUnlockTimeoutId = null
-                        }
-
                         this.audioPlayer.playUlawBase64(message.media.payload)
                     }
                     break
@@ -401,7 +311,7 @@ export class WebCallClient {
                     break
 
                 case 'clear':
-                    // Clear audio queue (barge-in)
+                    // Clear audio queue (barge-in execution - playback stop)
                     if (this.audioPlayer) {
                         this.audioPlayer.clear()
                     }
@@ -452,13 +362,7 @@ export class WebCallClient {
                 return
             }
 
-            // Suppress audio during greeting phase or while assistant is speaking
-            if (this.isGreetingPhase || this.isAssistantSpeaking) {
-                // Clear accumulated samples to prevent stale audio from being sent after unblock
-                accumulatedSamples = new Float32Array(0)
-                return
-            }
-
+            // Always send mic audio; barge-in & greeting suppression are handled in call-engine.
             const inputData = event.inputBuffer.getChannelData(0)
 
             // Resample to 8kHz
@@ -521,26 +425,5 @@ export class WebCallClient {
 
         // Reset mute state
         this.isMuted = false
-
-        // Reset greeting suppression state
-        this.isGreetingPhase = false
-        this.lastMediaReceivedAt = 0
-
-        if (this.greetingSafetyTimeoutId) {
-            clearTimeout(this.greetingSafetyTimeoutId)
-            this.greetingSafetyTimeoutId = null
-        }
-
-        if (this.greetingUnlockTimeoutId) {
-            clearTimeout(this.greetingUnlockTimeoutId)
-            this.greetingUnlockTimeoutId = null
-        }
-
-        // Reset assistant speaking state
-        this.isAssistantSpeaking = false
-        if (this.assistantUnlockTimeoutId) {
-            clearTimeout(this.assistantUnlockTimeoutId)
-            this.assistantUnlockTimeoutId = null
-        }
     }
 }
