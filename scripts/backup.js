@@ -23,9 +23,9 @@ function getFormattedDate() {
 console.log('Starting backup...');
 
 try {
-    // Generate code summary
-    console.log('Generating code summary...');
-    execSync('npm run summary', { stdio: 'inherit' });
+    // Pull latest changes first (with autostash for conflict prevention)
+    console.log('Pulling latest changes...');
+    runCommand('git pull origin main --rebase --autostash');
 
     // Check for changes
     const status = execSync('git status --porcelain').toString();
@@ -42,7 +42,6 @@ try {
     runCommand(`git commit -m "${message}"`);
 
     console.log('Pushing to origin main...');
-    runCommand('git pull origin main --rebase');
     runCommand('git push origin main');
 
     console.log('Backup completed successfully!');
