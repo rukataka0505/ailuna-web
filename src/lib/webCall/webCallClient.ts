@@ -51,7 +51,7 @@ export class WebCallClient {
     private greetingSafetyTimeoutId: ReturnType<typeof setTimeout> | null = null
     private greetingUnlockTimeoutId: ReturnType<typeof setTimeout> | null = null
 
-    // Assistant speaking suppression state (extends greeting logic to entire conversation)
+    // Assistant speaking state (general conversation suppression)
     private isAssistantSpeaking = false
     private assistantUnlockTimeoutId: ReturnType<typeof setTimeout> | null = null
 
@@ -159,20 +159,19 @@ export class WebCallClient {
                     this.sendMark(markName)
                 },
                 onQueueEmpty: () => {
-                    // Assistant speaking unlock (general conversation)
-                    if (this.isAssistantSpeaking && this.lastMediaReceivedAt > 0) {
+                    // Check if we should unlock greeting phase or assistant speaking
+                    if ((this.isGreetingPhase || this.isAssistantSpeaking) && this.lastMediaReceivedAt > 0) {
+                        // Prevent rapid unlocking if queue empties momentarily (jitter)
+                        // Wait 500ms to ensure no more audio is coming
                         if (!this.assistantUnlockTimeoutId) {
                             this.assistantUnlockTimeoutId = setTimeout(() => {
                                 const now = performance.now()
                                 const timeSinceLastMedia = now - this.lastMediaReceivedAt
 
                                 if (timeSinceLastMedia >= 500) {
-                                    console.log('[WebCallClient] Assistant speaking finished (Queue empty + 500ms quiet). Unblocking audio.')
+                                    console.log('[WebCallClient] Assistant playback finished (Queue empty + 500ms quiet). Unblocking audio.')
+                                    this.isGreetingPhase = false
                                     this.isAssistantSpeaking = false
-                                    // Also clear greeting phase if still active
-                                    if (this.isGreetingPhase) {
-                                        this.isGreetingPhase = false
-                                    }
                                 }
                                 this.assistantUnlockTimeoutId = null
                             }, 500)
@@ -274,20 +273,19 @@ export class WebCallClient {
                     this.sendMark(markName)
                 },
                 onQueueEmpty: () => {
-                    // Assistant speaking unlock (general conversation)
-                    if (this.isAssistantSpeaking && this.lastMediaReceivedAt > 0) {
+                    // Check if we should unlock greeting phase or assistant speaking
+                    if ((this.isGreetingPhase || this.isAssistantSpeaking) && this.lastMediaReceivedAt > 0) {
+                        // Prevent rapid unlocking if queue empties momentarily (jitter)
+                        // Wait 500ms to ensure no more audio is coming
                         if (!this.assistantUnlockTimeoutId) {
                             this.assistantUnlockTimeoutId = setTimeout(() => {
                                 const now = performance.now()
                                 const timeSinceLastMedia = now - this.lastMediaReceivedAt
 
                                 if (timeSinceLastMedia >= 500) {
-                                    console.log('[WebCallClient] Assistant speaking finished (Queue empty + 500ms quiet). Unblocking audio.')
+                                    console.log('[WebCallClient] Assistant playback finished (Queue empty + 500ms quiet). Unblocking audio.')
+                                    this.isGreetingPhase = false
                                     this.isAssistantSpeaking = false
-                                    // Also clear greeting phase if still active
-                                    if (this.isGreetingPhase) {
-                                        this.isGreetingPhase = false
-                                    }
                                 }
                                 this.assistantUnlockTimeoutId = null
                             }, 500)
@@ -386,10 +384,6 @@ export class WebCallClient {
                         this.isAssistantSpeaking = true
 
                         // If we received new media during unlock wait, cancel the unlock
-                        if (this.greetingUnlockTimeoutId) {
-                            clearTimeout(this.greetingUnlockTimeoutId)
-                            this.greetingUnlockTimeoutId = null
-                        }
                         if (this.assistantUnlockTimeoutId) {
                             clearTimeout(this.assistantUnlockTimeoutId)
                             this.assistantUnlockTimeoutId = null
@@ -460,7 +454,7 @@ export class WebCallClient {
 
             // Suppress audio during greeting phase or while assistant is speaking
             if (this.isGreetingPhase || this.isAssistantSpeaking) {
-                // Clear accumulated samples to prevent stale audio on unlock
+                // Clear accumulated samples to prevent stale audio from being sent after unblock
                 accumulatedSamples = new Float32Array(0)
                 return
             }
@@ -542,7 +536,7 @@ export class WebCallClient {
             this.greetingUnlockTimeoutId = null
         }
 
-        // Reset assistant speaking suppression state
+        // Reset assistant speaking state
         this.isAssistantSpeaking = false
         if (this.assistantUnlockTimeoutId) {
             clearTimeout(this.assistantUnlockTimeoutId)
