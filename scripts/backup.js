@@ -1,14 +1,5 @@
 const { execSync } = require('child_process');
 
-function runCommand(command) {
-    try {
-        execSync(command, { stdio: 'inherit' });
-    } catch (error) {
-        console.error(`Failed to execute command: ${command}`);
-        process.exit(1);
-    }
-}
-
 function getFormattedDate() {
     const now = new Date();
     const year = now.getFullYear();
@@ -20,32 +11,11 @@ function getFormattedDate() {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
-console.log('Starting backup...');
-
 try {
-    // Pull latest changes first (with autostash for conflict prevention)
-    console.log('Pulling latest changes...');
-    runCommand('git pull origin main --rebase --autostash');
-
-    // Check for changes
-    const status = execSync('git status --porcelain').toString();
-    if (!status) {
-        console.log('No changes to backup.');
-        process.exit(0);
-    }
-
-    console.log('Adding files...');
-    runCommand('git add .');
-
-    const message = `backup: ${getFormattedDate()}`;
-    console.log(`Committing with message: "${message}"...`);
-    runCommand(`git commit -m "${message}"`);
-
-    console.log('Pushing to origin main...');
-    runCommand('git push origin main');
-
-    console.log('Backup completed successfully!');
+    execSync('git add .', { stdio: 'inherit' });
+    execSync(`git commit -m "backup: ${getFormattedDate()}"`, { stdio: 'inherit' });
+    execSync('git push origin main', { stdio: 'inherit' });
+    console.log('Backup completed!');
 } catch (error) {
-    console.error('An error occurred during backup:', error.message);
     process.exit(1);
 }
